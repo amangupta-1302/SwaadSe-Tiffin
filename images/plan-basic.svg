@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img" aria-label="Basic Veg Tiffin placeholder">
+  <rect width="600" height="600" fill="#FFF8F0"/>
+  <rect x="1" y="1" width="598" height="598" fill="none" stroke="#E4E0D8" stroke-width="2" stroke-dasharray="10 8"/>
+  <circle cx="300" cy="270" r="102.00000000000001" fill="none" stroke="#F57C00" stroke-width="5.610000000000001"/>
+  <circle cx="300" cy="270" r="63.24000000000001" fill="none" stroke="#E4E0D8" stroke-width="4.590000000000001"/>
+  <text x="300" y="441" text-anchor="middle" fill="#6B5D54"
+    font-family="system-ui, sans-serif" font-size="35"
+    font-weight="600" letter-spacing="1.5">Basic Veg Tiffin</text>
+  <text x="300" y="477" text-anchor="middle" fill="#E4E0D8"
+    font-family="system-ui, sans-serif" font-size="25">replace with a real photo · 600×600</text>
+</svg>

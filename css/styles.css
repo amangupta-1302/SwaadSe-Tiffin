@@ -416,11 +416,19 @@ h1, h2, h3, .price, .plan__name {
 .band--green .eyebrow { color: var(--on-green-muted); }
 .band--green .section__lede { color: var(--on-green-muted); }
 .tiers { display: grid; gap: .85rem; margin-bottom: 1.5rem; }
+/* The tier cards DARKEN the band rather than lightening it. A white overlay
+   raised the background luminance far enough that white text fell to 3.3:1 —
+   below AA. Darkening keeps light text at 6.4:1 or better, and reads as a
+   recessed compartment, which suits the tiffin. The lead tier is emphasised
+   with a saffron ring instead of a lighter fill. */
 .tier {
   padding: 1.1rem 1.25rem; border-radius: var(--r-card);
-  background: rgba(255, 255, 255, .10); border: 1px solid rgba(255, 255, 255, .28);
+  background: rgba(0, 0, 0, .16); border: 1px solid rgba(255, 255, 255, .20);
 }
-.tier--lead { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .55); }
+.tier--lead {
+  background: rgba(0, 0, 0, .22);
+  border: 2px solid var(--saffron);
+}
 .tier__name { font-family: var(--font-display); font-weight: 700; font-size: 1rem; }
 .tier__price { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.7rem, 4.5vw, 2.2rem); letter-spacing: -0.03em; }
 .tier__note { font-size: var(--fs-xs); color: var(--on-green-muted); }
@@ -576,6 +584,10 @@ h1, h2, h3, .price, .plan__name {
     background: none; box-shadow: none; padding: 0;
   }
   .action-bar__btn {
+    /* flex:none is load-bearing. The base rule sets flex:1 (basis 0) for the
+       split mobile bar; left in place here it collapses these to zero height,
+       because a fixed column container has no height of its own to distribute. */
+    flex: none;
     width: 56px; height: 56px; min-height: 0; border-radius: 50%;
     box-shadow: var(--sh-2); transition: transform .18s ease;
   }
@@ -585,8 +597,14 @@ h1, h2, h3, .price, .plan__name {
 }
 
 /* ── 10. motion ──────────────────────────────────────────────────────────── */
-.reveal { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .5s ease; }
-.reveal.is-visible { opacity: 1; transform: none; }
+/* Scroll reveals are hidden ONLY when the .js class is present, which an inline
+   script in <head> adds. Putting opacity:0 in the base rule made every section
+   below the hero invisible with JavaScript disabled — the markup was there but
+   unreadable. `.reveal-all` is a safety net the same inline script arms on a
+   timer, so a paid visitor still sees content even if main.js fails to load. */
+.js .reveal { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .5s ease; }
+.js .reveal.is-visible,
+.js.reveal-all .reveal { opacity: 1; transform: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }

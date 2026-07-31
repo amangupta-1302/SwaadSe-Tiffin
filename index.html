@@ -28,6 +28,16 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="favicon.svg">
 
+<!-- Inline, so it cannot fail to load. Two jobs:
+     1. .js tells the stylesheet it is safe to hide scroll-reveal sections. With
+        JavaScript off the class never appears and everything renders visible.
+     2. .reveal-all is a safety net: if main.js dies, content still appears
+        rather than leaving a paid visitor staring at a blank page. -->
+<script>
+  document.documentElement.classList.add('js');
+  setTimeout(function () { document.documentElement.classList.add('reveal-all'); }, 1200);
+</script>
+
 <script src="js/content.js"></script>
 <script src="js/main.js" defer></script>
 

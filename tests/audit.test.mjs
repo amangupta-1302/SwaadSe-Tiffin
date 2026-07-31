@@ -57,6 +57,56 @@ test('every text/background token pair meets WCAG AA 4.5:1', () => {
   }
 });
 
+/**
+ * Composite an rgba overlay onto an opaque base — what the browser actually
+ * paints. Checking tokens alone once hid a real failure: translucent WHITE tier
+ * cards on the green band raised the background luminance until white text
+ * measured 3.3:1. The overlay has to be part of the assertion.
+ */
+const over = (base, overlayHex, alpha) => {
+  const b = base.match(/\w\w/g).map(h => parseInt(h, 16));
+  const o = overlayHex.match(/\w\w/g).map(h => parseInt(h, 16));
+  const mix = b.map((c, i) => Math.round(alpha * o[i] + (1 - alpha) * c));
+  return '#' + mix.map(c => c.toString(16).padStart(2, '0')).join('');
+};
+
+test('text over translucent overlays still meets AA', () => {
+  const GREEN = '#2E7D32';
+  const cases = [
+    ['#FFFFFF', over(GREEN, '#000000', 0.16), 'white on a tier card'],
+    ['#EDF6ED', over(GREEN, '#000000', 0.16), 'tier note on a tier card'],
+    ['#FFFFFF', over(GREEN, '#000000', 0.22), 'white on the lead tier card'],
+    ['#EDF6ED', over(GREEN, '#000000', 0.22), 'tier note on the lead tier card'],
+  ];
+  for (const [fg, bg, label] of cases) {
+    const r = ratio(fg, bg);
+    assert.ok(r >= 4.5, `${label}: ${r.toFixed(2)}:1 on ${bg} is below AA 4.5:1`);
+  }
+  // Guard the specific mistake that was made, so it cannot come back.
+  assert.ok(ratio('#FFFFFF', over(GREEN, '#FFFFFF', 0.18)) < 4.5,
+    'a WHITE overlay on the band is known-bad — that is why the cards darken');
+});
+
+test('footer text on the dark footer background meets AA', () => {
+  const INK = '#2A2320';
+  for (const [fg, label] of [['#EDE6E0', 'footer body'], ['#B9ADA4', 'footer muted'],
+    ['#C9BDB4', 'footer section title']]) {
+    const r = ratio(fg, INK);
+    assert.ok(r >= 4.5, `${label}: ${r.toFixed(2)}:1 is below AA 4.5:1`);
+  }
+});
+
+test('CTA band and step markers meet AA', () => {
+  for (const [fg, bg, label] of [
+    ['#2A2320', '#FFEEDC', 'CTA band heading on saffron wash'],
+    ['#6B5D54', '#FFEEDC', 'CTA band body on saffron wash'],
+    ['#1E5B22', '#E7F2E8', 'step number on leaf wash'],
+  ]) {
+    const r = ratio(fg, bg);
+    assert.ok(r >= 4.5, `${label}: ${r.toFixed(2)}:1 is below AA 4.5:1`);
+  }
+});
+
 test('white text is never placed on brand orange or WhatsApp green', () => {
   // Documents WHY the CTAs use near-black labels. If someone "fixes" the
   // buttons to white text later, this test explains the regression.

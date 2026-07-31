@@ -131,6 +131,29 @@ test('the week is also in static HTML so it survives JavaScript being off', () =
   assert.match(html, /<noscript>/);
 });
 
+test('scroll-reveal sections are visible without JavaScript', () => {
+  // Being present in the markup is not the same as being readable. An earlier
+  // version hid every .reveal section with opacity:0 in the base rule, so with
+  // JavaScript off the whole page below the hero rendered blank.
+  const css = read('css/styles.css');
+
+  const hidingRules = [...css.matchAll(/([^{}]*\.reveal[^{}]*)\{([^}]*)\}/g)]
+    .filter(([, , body]) => /opacity:\s*0\s*[;}]/.test(body))
+    .map(([, selector]) => selector.trim());
+
+  assert.ok(hidingRules.length > 0, 'expected the reveal animation to exist at all');
+  for (const selector of hidingRules)
+    assert.ok(/^\.js\b|\s\.js\b/.test(selector),
+      `"${selector}" hides content without requiring the .js class, so a visitor ` +
+      `with JavaScript disabled sees nothing`);
+
+  // The .js class must come from an inline script, which cannot fail to load.
+  assert.match(html, /<script>[\s\S]*documentElement\.classList\.add\('js'\)/,
+    'the .js class must be set inline in <head>, not from an external file');
+  // And a timer must reveal everything if main.js never runs.
+  assert.match(html, /reveal-all/, 'no safety net if main.js fails to load');
+});
+
 // ─── why choose us ───────────────────────────────────────────────────────────
 test('all ten reasons are listed under the exact section title', () => {
   assert.ok(html.includes('Why Choose SwaadSe Tiffin?'));

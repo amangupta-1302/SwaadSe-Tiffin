@@ -17,12 +17,21 @@ Before you upload anything, run this once to check you have not broken something
 npm test
 ```
 
-If it says `pass 53  fail 0`, you are safe to upload. If something fails, it tells
-you exactly what — undo your last change and try again.
+If the last line says `fail 0`, you are safe to upload. If something fails, it
+tells you exactly what — undo your last change and try again.
 
 ---
 
 ## 1. Today's menu and today's special — the weekly job
+
+**The easy way: open `/admin/` on your website.** Enter your password, edit the
+form, press **Copy the file**, then paste it over `js/content.js` in your hosting
+File Manager. The editor checks your work as you type and refuses to save
+anything broken, so the layout cannot break. Full setup is in README.md under
+**Admin area**.
+
+Everything below describes editing the same file **by hand**, if you prefer that
+or the admin page is not set up yet.
 
 **File: `js/content.js`** — this is the only file you need for menu updates.
 

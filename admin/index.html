@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Menu editor — SwaadSe Tiffin admin</title>
+
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+
+<!-- There is deliberately NO password anywhere in this page. Access is
+     controlled by the web server (see admin/.htaccess), which checks
+     credentials BEFORE this file is ever sent. A login written in JavaScript
+     would put the password in plain view of anyone pressing Ctrl+U. -->
+
+<style>
+  body { padding-bottom: 3rem; }
+  .admin-head { background: var(--ink); color: #EDE6E0; padding-block: 1rem; }
+  .admin-head .container { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: space-between; }
+  .admin-title { font-family: var(--font-display); font-weight: 800; font-size: 1.125rem; letter-spacing: -0.02em; }
+  .admin-sub { font-size: var(--fs-xs); color: #B9ADA4; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 1.25rem; margin-bottom: 1rem; }
+  .panel__title { font-family: var(--font-display); font-weight: 800; font-size: 1.0625rem; margin-bottom: .2rem; }
+  .panel__hint { font-size: var(--fs-sm); color: var(--ink-muted); margin-bottom: 1rem; }
+
+  label { display: block; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xs);
+          letter-spacing: .08em; text-transform: uppercase; color: var(--saffron-deep); margin-bottom: .35rem; }
+  input[type=text], input[type=number], textarea {
+    width: 100%; min-height: 44px; padding: .6rem .8rem; font: inherit; font-size: 1rem;
+    color: var(--ink); background: var(--cream);
+    border: 1.5px solid var(--line); border-radius: var(--r-sm);
+  }
+  textarea { min-height: 68px; resize: vertical; }
+  input:focus-visible, textarea:focus-visible { border-color: var(--saffron); }
+  input[type=number] { max-width: 7rem; }
+
+  .day { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 1rem; margin-bottom: .75rem; background: var(--cream); }
+  .day--today { border-color: var(--saffron); border-width: 2px; background: var(--saffron-wash); }
+  .day__head { display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline; justify-content: space-between; margin-bottom: .75rem; }
+  .day__name { font-family: var(--font-display); font-weight: 800; font-size: 1.0625rem; }
+  .day__flag { font-family: var(--font-display); font-weight: 700; font-size: .6875rem; letter-spacing: .08em;
+               text-transform: uppercase; background: var(--saffron); color: var(--saffron-ink);
+               padding: .15rem .55rem; border-radius: var(--r-btn); }
+  .dishes { display: grid; gap: .4rem; margin-bottom: .6rem; }
+  .dish { display: flex; gap: .4rem; align-items: center; }
+  .dish input { flex: 1; }
+  .icon-btn { flex: none; width: 44px; height: 44px; display: grid; place-items: center;
+              background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r-sm);
+              cursor: pointer; font-size: 1.1rem; line-height: 1; color: var(--ink-muted); }
+  .icon-btn:hover { border-color: var(--saffron-deep); color: var(--saffron-deep); }
+  .row { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end; }
+  .check { display: flex; gap: .5rem; align-items: center; }
+  .check input { width: 20px; height: 20px; min-height: 0; }
+  .check label { margin: 0; text-transform: none; letter-spacing: 0; font-size: var(--fs-sm); color: var(--ink); }
+
+  .issues { display: grid; gap: .4rem; margin-bottom: 1rem; }
+  .issue { display: flex; gap: .5rem; padding: .6rem .8rem; border-radius: var(--r-sm); font-size: var(--fs-sm); }
+  .issue--error { background: #FDECEA; color: #7A1C12; border: 1px solid #F3C4BE; }
+  .issue--warn { background: var(--saffron-wash); color: #6A3200; border: 1px solid #F0D3B4; }
+  .issue--ok { background: var(--leaf-wash); color: var(--leaf-deep); border: 1px solid #C3E0C6; }
+
+  .preview { background: var(--cream); border: 1px dashed var(--steel); border-radius: var(--r-sm); padding: 1rem; }
+  .preview__label { font-size: var(--fs-xs); color: var(--ink-muted); margin-bottom: .4rem; }
+
+  pre.output { background: var(--ink); color: #E8E2DC; padding: 1rem; border-radius: var(--r-sm);
+               overflow-x: auto; font-size: .8125rem; line-height: 1.55; max-height: 340px; }
+  .steps-help { counter-reset: s; display: grid; gap: .5rem; margin-bottom: 1rem; }
+  .steps-help li { display: flex; gap: .6rem; font-size: var(--fs-sm); }
+  .steps-help li::before { counter-increment: s; content: counter(s); flex: none;
+    width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%;
+    background: var(--leaf-wash); color: var(--leaf-deep); font-weight: 700; font-size: .75rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+  .toast { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%);
+           background: var(--ink); color: #fff; padding: .7rem 1.2rem; border-radius: var(--r-btn);
+           font-size: var(--fs-sm); box-shadow: var(--sh-2); opacity: 0; pointer-events: none;
+           transition: opacity .2s ease; z-index: 90; }
+  .toast.is-shown { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header class="admin-head">
+  <div class="container">
+    <div>
+      <p class="admin-title">Menu editor</p>
+      <p class="admin-sub">SwaadSe Tiffin · changes here do not go live until you save the file</p>
+    </div>
+    <a class="btn btn--ghost btn--compact" href="../index.html" target="_blank" rel="noopener"
+       style="color:#EDE6E0;box-shadow:inset 0 0 0 1.5px #453B36">View website</a>
+  </div>
+</header>
+
+<main class="section" style="padding-block:1.5rem">
+  <div class="container" style="max-width:760px">
+
+    <div id="issues" class="issues" aria-live="polite"></div>
+
+    <!-- ── today's special ─────────────────────────────────────────────── -->
+    <section class="panel">
+      <h2 class="panel__title">Today's special</h2>
+      <p class="panel__hint">Shown in the box near the top of the website. One line reads best on a phone.</p>
+      <label for="special">Today's special</label>
+      <input type="text" id="special" autocomplete="off">
+      <div class="actions" style="margin-top:.6rem">
+        <button type="button" class="btn btn--ghost btn--compact" id="fill-special">Fill from today's rotation</button>
+      </div>
+      <div class="preview" style="margin-top:1rem">
+        <p class="preview__label">How the top of the website will look</p>
+        <p class="dabba-tag" style="margin:0 0 .6rem">
+          <span class="dabba-tag__label">Next delivery</span>
+          <span class="dabba-tag__value" id="pv-delivery">—</span>
+        </p>
+        <div class="special">
+          <p class="special__label">Today's special</p>
+          <p class="special__value" id="pv-special">—</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── weekly rotation ─────────────────────────────────────────────── -->
+    <section class="panel">
+      <h2 class="panel__title">Weekly rotation</h2>
+      <p class="panel__hint">The website opens on today's day by itself, so you only need to change this when the
+        rotation actually changes — not every morning.</p>
+      <div id="days"></div>
+    </section>
+
+    <!-- ── delivery windows ────────────────────────────────────────────── -->
+    <section class="panel">
+      <h2 class="panel__title">Delivery windows</h2>
+      <p class="panel__hint">Drives the “Next delivery” tag. Times use the 24-hour clock, so 16 means 4 PM.
+        Only change these if your delivery timings change — and if they do, also update the three places on the
+        website itself (see EDITING-GUIDE section 7).</p>
+      <div id="windows"></div>
+    </section>
+
+    <!-- ── save ────────────────────────────────────────────────────────── -->
+    <section class="panel">
+      <h2 class="panel__title">Save your changes</h2>
+      <p class="panel__hint">Nothing is live yet. Put the text below into <code>js/content.js</code> on your website.</p>
+      <ol class="steps-help">
+        <li><span>Press <strong>Copy</strong> below.</span></li>
+        <li><span>Open your hosting <strong>File Manager</strong> → <code>js</code> → <code>content.js</code> → <strong>Edit</strong>.</span></li>
+        <li><span>Select everything already in there, paste over it, and <strong>Save</strong>.</span></li>
+        <li><span>Refresh the website. Done.</span></li>
+      </ol>
+      <div class="actions" style="margin-bottom:1rem">
+        <button type="button" class="btn btn--wa" id="copy">Copy the file</button>
+        <button type="button" class="btn btn--ghost btn--compact" id="download">Download instead</button>
+        <button type="button" class="btn btn--ghost btn--compact" id="revert">Undo all my changes</button>
+      </div>
+      <pre class="output" id="output" tabindex="0" aria-label="Generated content.js"></pre>
+    </section>
+
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Load the live content file and the site's own scheduling logic, so the
+     preview uses exactly the same function the website uses. No duplication. -->
+<script src="../js/content.js"></script>
+<script src="../js/main.js"></script>
+<script src="generate.js"></script>
+
+<script>
+(() => {
+  'use strict';
+
+  const DAY_NAMES  = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  const SHORT_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  const $ = id => document.getElementById(id);
+  const schedule = window.SwaadSeSchedule || null;
+
+  /** Deep copy so "Undo all my changes" can restore the file as loaded. */
+  const clone = value => JSON.parse(JSON.stringify(value));
+
+  const FALLBACK = {
+    todaysSpecial: '',
+    weeklyMenu: DAY_NAMES.map((day, i) => i === 6
+      ? { day, short: 'Sun', closed: true, note: 'Kitchen closed on Sundays. Monthly plans resume Monday morning.', items: [] }
+      : { day, short: SHORT_NAMES[i], items: ['', '', ''] }),
+    deliveryWindows: [
+      { label: '7:00 – 9:00 AM', startHour: 7, endHour: 9 },
+      { label: '4:00 – 5:00 PM', startHour: 16, endHour: 17 },
+    ],
+  };
+
+  const loaded = window.SITE ? clone(window.SITE) : clone(FALLBACK);
+  let state = clone(loaded);
+
+  const todayIndex = schedule ? schedule.menuIndexFor(new Date()) : 0;
+
+  /* ── rendering ─────────────────────────────────────────────────────── */
+
+  function renderDays() {
+    const host = $('days');
+    host.replaceChildren();
+
+    state.weeklyMenu.forEach((entry, i) => {
+      const box = document.createElement('div');
+      box.className = 'day' + (i === todayIndex ? ' day--today' : '');
+
+      const head = document.createElement('div');
+      head.className = 'day__head';
+      const name = document.createElement('span');
+      name.className = 'day__name';
+      name.textContent = entry.day;
+      head.append(name);
+      if (i === todayIndex) {
+        const flag = document.createElement('span');
+        flag.className = 'day__flag';
+        flag.textContent = 'Today';
+        head.append(flag);
+      }
+      box.append(head);
+
+      // Sunday (or any day) can be marked closed.
+      const closedWrap = document.createElement('div');
+      closedWrap.className = 'check';
+      closedWrap.style.marginBottom = '.75rem';
+      const closedBox = document.createElement('input');
+      closedBox.type = 'checkbox';
+      closedBox.id = `closed-${i}`;
+      closedBox.checked = Boolean(entry.closed);
+      closedBox.addEventListener('change', () => {
+        entry.closed = closedBox.checked;
+        if (entry.closed && !entry.note) entry.note = 'Kitchen closed. Monthly plans resume the next working day.';
+        renderDays(); refresh();
+      });
+      const closedLabel = document.createElement('label');
+      closedLabel.htmlFor = closedBox.id;
+      closedLabel.textContent = 'Kitchen closed on this day';
+      closedWrap.append(closedBox, closedLabel);
+      box.append(closedWrap);
+
+      if (entry.closed) {
+        const noteLabel = document.createElement('label');
+        noteLabel.htmlFor = `note-${i}`;
+        noteLabel.textContent = 'Message shown to customers';
+        const note = document.createElement('textarea');
+        note.id = `note-${i}`;
+        note.value = entry.note || '';
+        note.addEventListener('input', () => { entry.note = note.value; refresh(); });
+        box.append(noteLabel, note);
+      } else {
+        const dishLabel = document.createElement('label');
+        dishLabel.textContent = 'Dishes';
+        box.append(dishLabel);
+
+        const list = document.createElement('div');
+        list.className = 'dishes';
+        entry.items.forEach((dish, d) => {
+          const row = document.createElement('div');
+          row.className = 'dish';
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = dish;
+          input.autocomplete = 'off';
+          input.setAttribute('aria-label', `${entry.day} dish ${d + 1}`);
+          input.addEventListener('input', () => { entry.items[d] = input.value; refresh(); });
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'icon-btn';
+          remove.textContent = '×';
+          remove.setAttribute('aria-label', `Remove ${dish || 'dish'} from ${entry.day}`);
+          remove.addEventListener('click', () => {
+            entry.items.splice(d, 1); renderDays(); refresh();
+          });
+          row.append(input, remove);
+          list.append(row);
+        });
+        box.append(list);
+
+        const add = document.createElement('button');
+        add.type = 'button';
+        add.className = 'btn btn--ghost btn--compact';
+        add.textContent = '+ Add a dish';
+        add.addEventListener('click', () => { entry.items.push(''); renderDays(); refresh(); });
+        box.append(add);
+      }
+
+      host.append(box);
+    });
+  }
+
+  function renderWindows() {
+    const host = $('windows');
+    host.replaceChildren();
+    state.deliveryWindows.forEach((win, i) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.style.marginBottom = '.75rem';
+
+      const mk = (labelText, key, type) => {
+        const wrap = document.createElement('div');
+        wrap.style.flex = type === 'text' ? '1 1 14rem' : '0 0 auto';
+        const label = document.createElement('label');
+        label.htmlFor = `win-${i}-${key}`;
+        label.textContent = labelText;
+        const input = document.createElement('input');
+        input.type = type;
+        input.id = `win-${i}-${key}`;
+        input.value = win[key];
+        if (type === 'number') { input.min = '0'; input.max = '23'; }
+        input.addEventListener('input', () => {
+          win[key] = type === 'number' ? Number(input.value) : input.value;
+          refresh();
+        });
+        wrap.append(label, input);
+        return wrap;
+      };
+
+      row.append(mk(`Window ${i + 1} — what customers read`, 'label', 'text'));
+      row.append(mk('Starts (24h)', 'startHour', 'number'));
+      row.append(mk('Ends (24h)', 'endHour', 'number'));
+      host.append(row);
+    });
+  }
+
+  /* ── validation and file generation ─────────────────────────────────
+     Both live in admin/generate.js so Node can import and test them. A
+     second copy here would drift from the tested one. */
+  const { validate: validateState, generate: generateFile } = window.SwaadSeAdmin;
+  const validate = () => validateState(state);
+  const generate = () => generateFile(state);
+
+  /* ── refresh everything ────────────────────────────────────────────── */
+
+  function refresh() {
+    // preview
+    $('pv-special').textContent = state.todaysSpecial.trim() || '—';
+    if (schedule) {
+      const next = schedule.nextDelivery(new Date(), state.deliveryWindows);
+      $('pv-delivery').textContent = next ? `${next.when} · ${next.label}` : '—';
+    }
+
+    // issues
+    const issues = validate();
+    const host = $('issues');
+    host.replaceChildren();
+    const shown = issues.length ? issues
+      : [['ok', 'Everything looks good. Copy the file below and paste it into js/content.js.']];
+    for (const [kind, message] of shown) {
+      const el = document.createElement('p');
+      el.className = `issue issue--${kind}`;
+      el.textContent = (kind === 'error' ? '✕  ' : kind === 'warn' ? '!  ' : '✓  ') + message;
+      host.append(el);
+    }
+
+    const blocked = issues.some(([kind]) => kind === 'error');
+    $('copy').disabled = blocked;
+    $('download').disabled = blocked;
+    $('copy').style.opacity = blocked ? '.5' : '';
+    $('download').style.opacity = blocked ? '.5' : '';
+
+    $('output').textContent = generate();
+  }
+
+  /* ── toast ─────────────────────────────────────────────────────────── */
+  let toastTimer;
+  function toast(message) {
+    const el = $('toast');
+    el.textContent = message;
+    el.classList.add('is-shown');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('is-shown'), 2600);
+  }
+
+  /* ── wiring ────────────────────────────────────────────────────────── */
+
+  $('special').value = state.todaysSpecial;
+  $('special').addEventListener('input', e => { state.todaysSpecial = e.target.value; refresh(); });
+
+  $('fill-special').addEventListener('click', () => {
+    const today = state.weeklyMenu[todayIndex];
+    if (!today || today.closed || !today.items.length) {
+      toast('Today has no dishes listed to copy from.');
+      return;
+    }
+    state.todaysSpecial = today.items.filter(d => d.trim()).join(' · ');
+    $('special').value = state.todaysSpecial;
+    refresh();
+    toast(`Filled from ${today.day}.`);
+  });
+
+  $('copy').addEventListener('click', async () => {
+    const text = generate();
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Copied. Now paste it over js/content.js.');
+    } catch {
+      // Clipboard access needs HTTPS. Select the text so Ctrl+C still works.
+      const range = document.createRange();
+      range.selectNodeContents($('output'));
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      toast('Text selected — press Ctrl+C (or Cmd+C) to copy.');
+    }
+  });
+
+  $('download').addEventListener('click', () => {
+    const blob = new Blob([generate()], { type: 'text/javascript' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'content.js';
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast('Downloaded. Upload it into the js folder.');
+  });
+
+  $('revert').addEventListener('click', () => {
+    if (!confirm('Throw away every change you have made since opening this page?')) return;
+    state = clone(loaded);
+    $('special').value = state.todaysSpecial;
+    renderDays(); renderWindows(); refresh();
+    toast('Reverted to the file as it is on the website.');
+  });
+
+  if (!window.SITE) {
+    toast('Could not read the current menu — starting from a blank week.');
+  }
+
+  renderDays();
+  renderWindows();
+  refresh();
+})();
+</script>
+
+</body>
+</html>

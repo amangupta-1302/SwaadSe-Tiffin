@@ -92,7 +92,65 @@
      an aggregateRating block here. Do NOT add it before then — Google penalises
      review markup for reviews that do not exist. -->
 
-<!-- SECTION-SCHEMA: faq -->
+<!-- Each acceptedAnswer.text below is byte-identical to the visible answer in
+     the FAQ section. tests/sections.test.mjs enforces that: Google treats
+     schema that does not match the page as a structured-data violation. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What areas do you deliver to?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We deliver within 5 km of our kitchen at 37/1 Om Vihar, Kamla Nagar, Agra. That covers Kamla Nagar, Dayalbagh, Balkeshwar, Sikandra and the colonies around them. Send us your locality on WhatsApp and we will confirm straight away."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I order only one meal?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. A single meal is ₹80 and there is no minimum order. Most of our monthly customers started with one tiffin to check the taste first."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you provide monthly subscriptions?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. One tiffin a day is ₹2400 a month and lunch plus dinner is ₹4600 a month, both covering Monday to Saturday. Payment is made at the start of the cycle."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I pay?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Cash on delivery, UPI, Google Pay or Paytm. Monthly plans are paid at the start of the cycle. There is no online payment on this website — everything is arranged directly with us."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you offer customized meals?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. We can reduce the spice, cook without onion and garlic, change the number of rotis, or leave out an item you do not eat. Tell us what you need on WhatsApp and we will confirm what is possible."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is the food prepared fresh every day?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Every tiffin is cooked the same morning it is delivered. Nothing is stored overnight and nothing is reheated from the day before."
+      }
+    }
+  ]
+}
+</script>
 </head>
 
 <body id="top">
@@ -206,20 +264,731 @@
     </div>
   </section>
 
-  <!-- SECTION: todays-menu -->
-  <!-- SECTION: why-us -->
-  <!-- SECTION: plans -->
-  <!-- SECTION: subscription -->
-  <!-- SECTION: packs -->
-  <!-- SECTION: how-it-works -->
-  <!-- SECTION: delivery -->
-  <!-- SECTION: reviews -->
-  <!-- SECTION: faq -->
-  <!-- SECTION: contact -->
+  <div class="container"><hr class="rule"></div>
+
+  <!-- ══════════════════ TODAY'S MENU ══════════════════
+       The week below is a FALLBACK, shown only when JavaScript is off. What
+       customers normally see is rendered from js/content.js — that is the one
+       file to edit weekly. See EDITING-GUIDE.md section 1. -->
+  <section class="section" id="todays-menu" aria-labelledby="menu-title">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">This week's kitchen</p>
+        <h2 class="section__title" id="menu-title">Today's Menu</h2>
+        <p class="section__lede">A different dal and sabji every day, so a month of tiffins never repeats itself. Rice and hot tawa rotis come with every meal.</p>
+      </div>
+
+      <div class="menu js-menu reveal">
+        <div class="menu__tabs"></div>
+        <div class="menu__panels">
+          <div class="menu__panel">
+            <p class="menu__day">Monday</p>
+            <ul class="menu__items">
+              <li class="menu__item">Dal Tadka</li><li class="menu__item">Mix Veg</li>
+              <li class="menu__item">Rice</li><li class="menu__item">4 Tawa Roti</li>
+            </ul>
+          </div>
+          <div class="menu__panel">
+            <p class="menu__day">Tuesday</p>
+            <ul class="menu__items">
+              <li class="menu__item">Rajma</li><li class="menu__item">Aloo Gobhi</li>
+              <li class="menu__item">Rice</li><li class="menu__item">4 Tawa Roti</li>
+            </ul>
+          </div>
+          <div class="menu__panel">
+            <p class="menu__day">Wednesday</p>
+            <ul class="menu__items">
+              <li class="menu__item">Chana Masala</li><li class="menu__item">Lauki Kofta</li>
+              <li class="menu__item">Rice</li><li class="menu__item">4 Tawa Roti</li>
+            </ul>
+          </div>
+          <div class="menu__panel">
+            <p class="menu__day">Thursday</p>
+            <ul class="menu__items">
+              <li class="menu__item">Dal Fry</li><li class="menu__item">Aloo Matar</li>
+              <li class="menu__item">Rice</li><li class="menu__item">4 Tawa Roti</li>
+            </ul>
+          </div>
+          <div class="menu__panel">
+            <p class="menu__day">Friday</p>
+            <ul class="menu__items">
+              <li class="menu__item">Kadhi Pakoda</li><li class="menu__item">Bhindi Masala</li>
+              <li class="menu__item">Rice</li><li class="menu__item">4 Tawa Roti</li>
+            </ul>
+          </div>
+          <div class="menu__panel">
+            <p class="menu__day">Saturday</p>
+            <ul class="menu__items">
+              <li class="menu__item">Dal Makhani</li><li class="menu__item">Seasonal Sabji</li>
+              <li class="menu__item">Rice</li><li class="menu__item">4 Tawa Roti</li>
+            </ul>
+          </div>
+          <div class="menu__panel">
+            <p class="menu__day">Sunday</p>
+            <p class="menu__closed">Kitchen closed on Sundays. Monthly plans resume Monday morning.</p>
+          </div>
+        </div>
+      </div>
+
+      <noscript>
+        <p class="cta-inline__text">The menu changes daily. Message us on WhatsApp for today's dishes.</p>
+      </noscript>
+
+      <div class="cta-inline reveal">
+        <p class="cta-inline__text">Want something specific tomorrow?</p>
+        <a class="btn btn--wa btn--compact"
+           href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20please%20share%20the%20menu%20for%20today."
+           aria-label="Ask about today's menu on WhatsApp">Ask on WhatsApp</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ WHY US ══════════════════ -->
+  <section class="section section--white" id="why-us" aria-labelledby="why-title">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">Ten reasons to switch</p>
+        <h2 class="section__title" id="why-title">Why Choose SwaadSe Tiffin?</h2>
+        <p class="section__lede">We cook the way a family cooks for itself — small batches, fresh every morning, no shortcuts.</p>
+      </div>
+
+      <ul class="grid grid--features reveal">
+        <li class="card card--lift feature">
+          <span class="feature__icon-wrap"><svg class="feature__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3c2.4 2.9.7 4.7 2 6.7C15.6 12 18 11.2 18 13.8A6 6 0 0 1 6 13.8c0-3.8 2.9-4.7 3.1-7.7"/></svg></span>
+          <h3 class="feature__title">Freshly Cooked Daily</h3>
+          <p class="feature__text">Cooking starts at 5 AM. Nothing is made the night before.</p>
+        </li>
+        <li class="card card--lift feature">
+          <span class="feature__icon-wrap"><svg class="feature__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 20h18M5 20v-9a7 7 0 0 1 14 0v9M9 7V4M15 7V4"/></svg></span>
+          <h3 class="feature__title">Home-Style Taste</h3>
+          <p class="feature__text">The same masalas and measures we use for our own family.</p>
+        </li>
+        <li class="card card--lift feature">
+          <span class="feature__icon-wrap"><svg class="feature__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/><path d="M9.2 12l2 2 3.6-3.8"/></svg></span>
+          <h3 class="feature__title">Hygienic Kitchen</h3>
+          <p class="feature__text">A clean home kitchen you are welcome to come and see.</p>
+        </li>
+        <li class="card card--lift feature">
+          <span class="feature__icon-wrap"><svg class="feature__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4l2.2 4.8 5.3.6-3.9 3.6 1 5.2-4.6-2.6-4.6 2.6 1-5.2L4.5 9.4l5.3-.6z"/></svg></span>
+          <h3 class="feature__title">Premium Quality Ingredients</h3>
+          <p class="feature__text">Branded atta and refined oil, with vegetables bought each morning.</p>
+        </li>
+        <li class="card card--lift feature">
+          <span class="feature__icon-wrap"><svg class="feature__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 8h16v11H4zM4 12h16M8 5v3M16 5v3"/></svg></span>
+          <h3 class="feature__title">Affordable Monthly Plans</h3>
+          <p class="feature__text">₹2400 a month works out cheaper than cooking for one.</p>
+        </li>
+        <li class="card card--lift feature">
+          <span class="feature__icon-wrap"><svg class="feature__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/></svg></span>
+          <h3 class="feature__title">Timely Delivery</h3>
+          <p class="feature__text">Morning tiffins by 9 AM, evening tiffins by 5 PM. Every day.</p>
+        </li>
+        <li class="card card--lift feature">
+          <span class="feature__icon-wrap"><svg class="feature__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20.5S4.5 15.9 4.5 10.2A3.9 3.9 0 0 1 12 8a3.9 3.9 0 0 1 7.5 2.2c0 5.7-7.5 10.3-7.5 10.3z"/></svg></span>
+          <h3 class="feature__title">Healthy Balanced Meals</h3>
+          <p class="feature__text">Dal, sabji, rice and roti in every tiffin. Never oily.</p>
+        </li>
+        <li class="card card--lift feature">
+          <span class="feature__icon-wrap"><svg class="feature__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 8.5 12 4.5l9 4-9 4-9-4z"/><path d="M7 11v4.6c0 1.4 2.2 2.4 5 2.4s5-1 5-2.4V11"/></svg></span>
+          <h3 class="feature__title">Perfect for Students</h3>
+          <p class="feature__text">Hostel-friendly portions at a price that fits a monthly budget.</p>
+        </li>
+        <li class="card card--lift feature">
+          <span class="feature__icon-wrap"><svg class="feature__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 8h16v11H4zM9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></span>
+          <h3 class="feature__title">Perfect for Office Lunch</h3>
+          <p class="feature__text">Packed to stay warm and travel without spilling.</p>
+        </li>
+        <li class="card card--lift feature">
+          <span class="feature__icon-wrap"><svg class="feature__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20.5S4.5 15.9 4.5 10.2A3.9 3.9 0 0 1 12 8a3.9 3.9 0 0 1 7.5 2.2c0 5.7-7.5 10.3-7.5 10.3z"/><path d="M9.5 11.2h5"/></svg></span>
+          <h3 class="feature__title">Made with Love</h3>
+          <p class="feature__text">A family kitchen, not a commercial one. You can taste it.</p>
+        </li>
+      </ul>
+
+      <figure class="reveal" style="margin-top:1.5rem">
+        <img src="images/kitchen-hygiene.svg" alt="Our home kitchen in Kamla Nagar, where every tiffin is cooked each morning"
+             width="900" height="600" loading="lazy" decoding="async"
+             style="width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:var(--r-card)">
+        <figcaption class="hero__caption">Visitors are welcome — ask us and come see the kitchen before you subscribe.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ══════════════════ MEAL PLANS ══════════════════
+       ✏️ EDIT: PRICES — change the number inside <span class="price"> and the
+       matching amount in the WhatsApp link's text= message. Both, or the
+       message the customer sends you will quote an old price. -->
+  <section class="section" id="plans" aria-labelledby="plans-title">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">Transparent pricing</p>
+        <h2 class="section__title" id="plans-title">Choose Your Tiffin</h2>
+        <p class="section__lede">One price, everything included, no delivery charge inside 5 km. Try a single meal before you commit to a month.</p>
+      </div>
+
+      <ul class="grid grid--plans reveal">
+
+        <li class="card plan card--lift">
+          <img src="images/plan-basic.svg" alt="Basic veg tiffin with dal, seasonal sabji, rice and four tawa rotis"
+               width="600" height="600" loading="lazy" decoding="async"
+               style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r-sm);margin-bottom:.9rem">
+          <h3 class="plan__name">Basic Veg Tiffin</h3>
+          <p class="plan__price"><span class="price">₹80</span><span class="price__unit">per meal</span></p>
+          <ul class="plan__includes">
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>4 Tawa Roti</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Rice</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Dal</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Seasonal Sabji</li>
+          </ul>
+          <p class="plan__packing">Packing: Standard Tiffin</p>
+          <a class="btn btn--wa btn--block plan__cta"
+             href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20the%20Basic%20Veg%20Tiffin%20%28%E2%82%B980%20per%20meal%29."
+             aria-label="Order the Basic Veg Tiffin on WhatsApp">Order This Plan</a>
+        </li>
+
+        <li class="card plan plan--featured card--lift">
+          <span class="plan__badge">Most Popular</span>
+          <img src="images/plan-standard.svg" alt="Standard veg tiffin with dal, sabji, rice, rotis, raita and salad"
+               width="600" height="600" loading="lazy" decoding="async"
+               style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r-sm);margin-bottom:.9rem">
+          <h3 class="plan__name">Standard Veg Tiffin</h3>
+          <p class="plan__price"><span class="price">₹120</span><span class="price__unit">per meal</span></p>
+          <ul class="plan__includes">
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>4 Tawa Roti</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Rice</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Dal</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Seasonal Sabji</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Raita</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Salad</li>
+          </ul>
+          <p class="plan__packing">Packing: Disposable</p>
+          <a class="btn btn--wa btn--block plan__cta"
+             href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20the%20Standard%20Veg%20Tiffin%20%28%E2%82%B9120%20per%20meal%29."
+             aria-label="Order the Standard Veg Tiffin on WhatsApp">Order This Plan</a>
+        </li>
+
+        <li class="card plan card--lift">
+          <img src="images/plan-premium.svg" alt="Premium veg tiffin with paneer sabji, dal, seasonal sabji, rice, rotis, raita and salad"
+               width="600" height="600" loading="lazy" decoding="async"
+               style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r-sm);margin-bottom:.9rem">
+          <h3 class="plan__name">Premium Veg Tiffin</h3>
+          <p class="plan__price"><span class="price">₹150</span><span class="price__unit">per meal</span></p>
+          <ul class="plan__includes">
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>4 Tawa Roti</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Rice</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Dal</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Paneer Sabji</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Seasonal Sabji</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Raita</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Salad</li>
+          </ul>
+          <p class="plan__packing">Packing: Disposable</p>
+          <a class="btn btn--wa btn--block plan__cta"
+             href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20the%20Premium%20Veg%20Tiffin%20%28%E2%82%B9150%20per%20meal%29."
+             aria-label="Order the Premium Veg Tiffin on WhatsApp">Order This Plan</a>
+        </li>
+
+        <li class="card plan card--lift">
+          <img src="images/plan-deluxe.svg" alt="Deluxe veg tiffin with paneer sabji, missi roti, sweet, mirchoni, pickle, raita and salad"
+               width="600" height="600" loading="lazy" decoding="async"
+               style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r-sm);margin-bottom:.9rem">
+          <h3 class="plan__name">Deluxe Veg Tiffin</h3>
+          <p class="plan__price"><span class="price">₹170</span><span class="price__unit">per meal</span></p>
+          <ul class="plan__includes">
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>3 Plain Roti</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>1 Missi Roti</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Rice</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Dal</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Paneer Sabji</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Seasonal Sabji</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Raita</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Sweet</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Mirchoni</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Salad</li>
+            <li><svg class="tick" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M4 10.5l4 4 8-8.5"/></svg>Pickle</li>
+          </ul>
+          <p class="plan__packing">Packing: Disposable</p>
+          <a class="btn btn--wa btn--block plan__cta"
+             href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20the%20Deluxe%20Veg%20Tiffin%20%28%E2%82%B9170%20per%20meal%29."
+             aria-label="Order the Deluxe Veg Tiffin on WhatsApp">Order This Plan</a>
+        </li>
+
+      </ul>
+
+      <div class="cta-band reveal" style="margin-top:1.75rem">
+        <p class="cta-band__title">Not sure which plan suits you?</p>
+        <p class="cta-band__text">Tell us who is eating and how hungry they get. We will suggest the right tiffin — no pressure to subscribe.</p>
+        <a class="btn btn--wa btn--lg"
+           href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20which%20tiffin%20plan%20would%20you%20suggest%20for%20me%3F"
+           aria-label="Ask which plan suits you, on WhatsApp">
+          <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2Zm5.8 14.06c-.24.68-1.4 1.3-1.93 1.35-.53.05-1.02.24-3.44-.72-2.92-1.15-4.75-4.2-4.9-4.4-.14-.19-1.15-1.53-1.15-2.92 0-1.39.73-2.07 1-2.36.26-.29.57-.36.76-.36l.55.01c.17 0 .41-.07.64.48.24.58.8 1.98.87 2.12.07.15.12.31.02.5-.1.19-.15.31-.29.48l-.44.5c-.14.14-.29.3-.13.58.17.29.75 1.23 1.6 2 1.11.98 2.04 1.29 2.33 1.44.29.14.46.12.63-.07.17-.2.72-.84.92-1.13.19-.29.39-.24.65-.14.27.09 1.67.78 1.96.93.29.14.48.22.55.34.07.13.07.72-.17 1.4Z"/></svg>
+          <span>Ask on WhatsApp</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ MONTHLY SUBSCRIPTION ══════════════════ -->
+  <section class="section band--green" id="subscription" aria-labelledby="sub-title">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">The plan most customers settle into</p>
+        <h2 class="section__title" id="sub-title">Monthly Subscription</h2>
+        <p class="section__lede">Pay once at the start of the cycle and stop thinking about lunch. Monday to Saturday, delivered to your door.</p>
+      </div>
+
+      <ul class="tiers reveal">
+        <li class="tier tier--lead">
+          <p class="tier__name">Monthly Lunch + Dinner</p>
+          <p class="tier__price">₹4600</p>
+          <p class="tier__note">Two tiffins a day · Mon–Sat · 52 meals</p>
+          <span class="tier__flag">Saves ₹200 vs two single plans</span>
+        </li>
+        <li class="tier">
+          <p class="tier__name">Monthly One-Time Meal</p>
+          <p class="tier__price">₹2400</p>
+          <p class="tier__note">One tiffin a day · Mon–Sat · 26 meals</p>
+        </li>
+        <li class="tier">
+          <p class="tier__name">Single Meal</p>
+          <p class="tier__price">₹80</p>
+          <p class="tier__note">No commitment · try before subscribing</p>
+        </li>
+      </ul>
+
+      <a class="btn btn--wa btn--lg reveal"
+         href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20start%20the%20Monthly%20Lunch%20%2B%20Dinner%20plan%20%28%E2%82%B94600%29."
+         aria-label="Start a monthly plan on WhatsApp">
+        <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2Zm5.8 14.06c-.24.68-1.4 1.3-1.93 1.35-.53.05-1.02.24-3.44-.72-2.92-1.15-4.75-4.2-4.9-4.4-.14-.19-1.15-1.53-1.15-2.92 0-1.39.73-2.07 1-2.36.26-.29.57-.36.76-.36l.55.01c.17 0 .41-.07.64.48.24.58.8 1.98.87 2.12.07.15.12.31.02.5-.1.19-.15.31-.29.48l-.44.5c-.14.14-.29.3-.13.58.17.29.75 1.23 1.6 2 1.11.98 2.04 1.29 2.33 1.44.29.14.46.12.63-.07.17-.2.72-.84.92-1.13.19-.29.39-.24.65-.14.27.09 1.67.78 1.96.93.29.14.48.22.55.34.07.13.07.72-.17 1.4Z"/></svg>
+        <span>Start My Monthly Plan</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ══════════════════ FOOD PACKS ══════════════════ -->
+  <section class="section" id="packs" aria-labelledby="packs-title">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">Order by the portion</p>
+        <h2 class="section__title" id="packs-title">Food Packs</h2>
+        <p class="section__lede">Having people over, or just want extra of one thing? Order any of these on their own.</p>
+      </div>
+
+      <ul class="grid grid--packs reveal">
+        <li class="card card--lift pack">
+          <p class="pack__name">Dal</p><p class="pack__qty">400 ml</p>
+          <p class="pack__price">₹180</p>
+          <a class="link-arrow pack__link" href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20Dal%20400%20ml%20%28%E2%82%B9180%29." aria-label="Order Dal on WhatsApp">Order<span aria-hidden="true"> →</span></a>
+        </li>
+        <li class="card card--lift pack">
+          <p class="pack__name">Rice</p><p class="pack__qty">400 ml</p>
+          <p class="pack__price">₹140</p>
+          <a class="link-arrow pack__link" href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20Rice%20400%20ml%20%28%E2%82%B9140%29." aria-label="Order Rice on WhatsApp">Order<span aria-hidden="true"> →</span></a>
+        </li>
+        <li class="card card--lift pack">
+          <p class="pack__name">4 Roti</p><p class="pack__qty">Fresh tawa roti</p>
+          <p class="pack__price">₹80</p>
+          <a class="link-arrow pack__link" href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%204%20Roti%20%28%E2%82%B980%29." aria-label="Order 4 Roti on WhatsApp">Order<span aria-hidden="true"> →</span></a>
+        </li>
+        <li class="card card--lift pack">
+          <p class="pack__name">Shahi Paneer</p><p class="pack__qty">Rich tomato gravy</p>
+          <p class="pack__price">₹220</p>
+          <a class="link-arrow pack__link" href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20Shahi%20Paneer%20%28%E2%82%B9220%29." aria-label="Order Shahi Paneer on WhatsApp">Order<span aria-hidden="true"> →</span></a>
+        </li>
+        <li class="card card--lift pack">
+          <p class="pack__name">Butter Paneer Masala</p><p class="pack__qty">Mildly spiced</p>
+          <p class="pack__price">₹260</p>
+          <a class="link-arrow pack__link" href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20Butter%20Paneer%20Masala%20%28%E2%82%B9260%29." aria-label="Order Butter Paneer Masala on WhatsApp">Order<span aria-hidden="true"> →</span></a>
+        </li>
+        <li class="card card--lift pack">
+          <p class="pack__name">Mixed Raita</p><p class="pack__qty">Fresh curd</p>
+          <p class="pack__price">₹140</p>
+          <a class="link-arrow pack__link" href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20Mixed%20Raita%20%28%E2%82%B9140%29." aria-label="Order Mixed Raita on WhatsApp">Order<span aria-hidden="true"> →</span></a>
+        </li>
+        <li class="card card--lift pack">
+          <p class="pack__name">Mutter Paneer</p><p class="pack__qty">Peas and paneer</p>
+          <p class="pack__price">₹140</p>
+          <a class="link-arrow pack__link" href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20Mutter%20Paneer%20%28%E2%82%B9140%29." aria-label="Order Mutter Paneer on WhatsApp">Order<span aria-hidden="true"> →</span></a>
+        </li>
+        <li class="card card--lift pack">
+          <p class="pack__name">Butter Naan</p><p class="pack__qty">2 pcs</p>
+          <p class="pack__price">₹50</p>
+          <a class="link-arrow pack__link" href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20Butter%20Naan%202%20pcs%20%28%E2%82%B950%29." aria-label="Order Butter Naan on WhatsApp">Order<span aria-hidden="true"> →</span></a>
+        </li>
+      </ul>
+
+      <div class="cta-inline reveal">
+        <p class="cta-inline__text">Ordering for a group? Send us the list and we will price it.</p>
+        <a class="btn btn--wa btn--compact"
+           href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20food%20packs.%20My%20list%20is%3A%20"
+           aria-label="Send a food pack order on WhatsApp">Send your list</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ HOW IT WORKS ══════════════════ -->
+  <section class="section section--white" id="how-it-works" aria-labelledby="how-title">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">Four steps, about two minutes</p>
+        <h2 class="section__title" id="how-title">How It Works</h2>
+      </div>
+
+      <ol class="steps reveal">
+        <li class="card step">
+          <span class="step__num">1</span>
+          <span>
+            <span class="step__title">Choose Meal Plan</span>
+            <span class="step__text">Pick a tiffin from the plans above, or ask us to suggest one.</span>
+          </span>
+        </li>
+        <li class="card step">
+          <span class="step__num">2</span>
+          <span>
+            <span class="step__title">Message on WhatsApp</span>
+            <span class="step__text">Tap any green button. Your plan is already written in the message.</span>
+          </span>
+        </li>
+        <li class="card step">
+          <span class="step__num">3</span>
+          <span>
+            <span class="step__title">Confirm Address</span>
+            <span class="step__text">Share your address and pick a morning or evening slot.</span>
+          </span>
+        </li>
+        <li class="card step">
+          <span class="step__num">4</span>
+          <span>
+            <span class="step__title">Fresh Food Delivered Daily</span>
+            <span class="step__text">Hot tiffin at your door, Monday to Saturday.</span>
+          </span>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ══════════════════ DELIVERY INFORMATION ══════════════════ -->
+  <section class="section" id="delivery" aria-labelledby="delivery-title">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">Where and when</p>
+        <h2 class="section__title" id="delivery-title">Delivery Information</h2>
+      </div>
+
+      <div class="grid grid--3 reveal">
+        <div class="card info">
+          <p class="info__label">Delivery radius</p>
+          <p class="info__big">5 KM</p>
+          <p class="feature__text">Measured from our kitchen in Kamla Nagar. No delivery charge inside this radius.</p>
+          <p style="margin-top:.7rem">
+            <a class="link-arrow" href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20do%20you%20deliver%20to%20my%20area%3F%20My%20locality%20is%3A%20"
+               aria-label="Check delivery to your area on WhatsApp">Not sure if we reach you? Ask us<span aria-hidden="true"> →</span></a>
+          </p>
+        </div>
+
+        <div class="card info">
+          <p class="info__label">Kitchen location</p>
+          <address>
+            37/1 Om Vihar<br>
+            Kamla Nagar<br>
+            Agra, Uttar Pradesh 282005
+          </address>
+          <p style="margin-top:.7rem"><a class="link-arrow" href="#contact">See map and directions<span aria-hidden="true"> →</span></a></p>
+        </div>
+
+        <div class="card info">
+          <p class="info__label">Delivery timing</p>
+          <dl>
+            <div class="info__row"><dt>Morning</dt><dd>7:00 AM – 9:00 AM</dd></div>
+            <div class="info__row"><dt>Evening</dt><dd>4:00 PM – 5:00 PM</dd></div>
+            <div class="info__row"><dt>Days</dt><dd>Mon–Sat</dd></div>
+          </dl>
+          <p class="info__closed">Sunday Closed</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ REVIEWS ══════════════════
+       ⚠️ REQUIRED BEFORE LAUNCH: every card below is marked
+       data-placeholder="true" and contains SAMPLE text. Replace all three with
+       real customer quotes and remove the attribute. Publishing invented
+       testimonials misleads customers and risks a Google Ads disapproval.
+       EDITING-GUIDE.md section 3 has a copy-paste block. -->
+  <section class="section section--white" id="reviews" aria-labelledby="reviews-title">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">What customers say</p>
+        <h2 class="section__title" id="reviews-title">Customer Reviews</h2>
+      </div>
+
+      <ul class="grid grid--3 reveal">
+        <li class="card card--lift review" data-placeholder="true">
+          <span class="stars" role="img" aria-label="Rated 5 out of 5">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+          </span>
+          <blockquote>Sample review — replace with a real customer quote before launch. Two or three sentences about taste, punctuality or value works best.</blockquote>
+          <div class="review__who">
+            <img class="review__avatar" src="images/avatar-1.svg" alt="" width="40" height="40" loading="lazy" decoding="async">
+            <span>
+              <span class="review__name">Customer name</span><br>
+              <span class="review__meta">Area · plan they use</span>
+            </span>
+          </div>
+        </li>
+
+        <li class="card card--lift review" data-placeholder="true">
+          <span class="stars" role="img" aria-label="Rated 5 out of 5">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+          </span>
+          <blockquote>Sample review — replace with a real customer quote before launch. Quotes that mention a specific dish or the delivery time are the most convincing.</blockquote>
+          <div class="review__who">
+            <img class="review__avatar" src="images/avatar-2.svg" alt="" width="40" height="40" loading="lazy" decoding="async">
+            <span>
+              <span class="review__name">Customer name</span><br>
+              <span class="review__meta">Area · plan they use</span>
+            </span>
+          </div>
+        </li>
+
+        <li class="card card--lift review" data-placeholder="true">
+          <span class="stars" role="img" aria-label="Rated 5 out of 5">
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+            <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2l2.4 5.3 5.6.6-4.2 3.9 1.1 5.7L10 14.7 5.1 17.5l1.1-5.7L2 7.9l5.6-.6z"/></svg>
+          </span>
+          <blockquote>Sample review — replace with a real customer quote before launch. Ask a regular customer for two lines over WhatsApp; most are happy to help.</blockquote>
+          <div class="review__who">
+            <img class="review__avatar" src="images/avatar-3.svg" alt="" width="40" height="40" loading="lazy" decoding="async">
+            <span>
+              <span class="review__name">Customer name</span><br>
+              <span class="review__meta">Area · plan they use</span>
+            </span>
+          </div>
+        </li>
+      </ul>
+
+      <!-- ✏️ EDIT: paste your Google Business Profile link into the href below. -->
+      <div class="card gbp reveal" style="margin-top:1.25rem">
+        <div>
+          <p class="info__label">Google reviews</p>
+          <p class="feature__text">Read what customers have written on our Google Business Profile, or leave a review after your first tiffin.</p>
+        </div>
+        <a class="btn btn--ghost btn--compact" href="#contact" rel="noopener">See us on Google</a>
+      </div>
+
+      <div class="cta-band reveal" style="margin-top:1.5rem">
+        <p class="cta-band__title">Try one tiffin before you decide</p>
+        <p class="cta-band__text">A single meal is ₹80 with no commitment. If you like it, we will set up your monthly plan on the same chat.</p>
+        <a class="btn btn--wa btn--lg"
+           href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20try%20a%20single%20meal%20%28%E2%82%B980%29%20first."
+           aria-label="Order a single trial meal on WhatsApp">
+          <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2Zm5.8 14.06c-.24.68-1.4 1.3-1.93 1.35-.53.05-1.02.24-3.44-.72-2.92-1.15-4.75-4.2-4.9-4.4-.14-.19-1.15-1.53-1.15-2.92 0-1.39.73-2.07 1-2.36.26-.29.57-.36.76-.36l.55.01c.17 0 .41-.07.64.48.24.58.8 1.98.87 2.12.07.15.12.31.02.5-.1.19-.15.31-.29.48l-.44.5c-.14.14-.29.3-.13.58.17.29.75 1.23 1.6 2 1.11.98 2.04 1.29 2.33 1.44.29.14.46.12.63-.07.17-.2.72-.84.92-1.13.19-.29.39-.24.65-.14.27.09 1.67.78 1.96.93.29.14.48.22.55.34.07.13.07.72-.17 1.4Z"/></svg>
+          <span>Order a trial meal</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ FAQ ══════════════════
+       Each answer below must stay byte-identical to its acceptedAnswer.text in
+       the FAQPage schema in <head>. Change one, change both. -->
+  <section class="section" id="faq" aria-labelledby="faq-title">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">Before you message us</p>
+        <h2 class="section__title" id="faq-title">Frequently Asked Questions</h2>
+      </div>
+
+      <div class="faq__list reveal">
+        <details class="faq__item">
+          <summary>What areas do you deliver to?</summary>
+          <div class="faq__answer">We deliver within 5 km of our kitchen at 37/1 Om Vihar, Kamla Nagar, Agra. That covers Kamla Nagar, Dayalbagh, Balkeshwar, Sikandra and the colonies around them. Send us your locality on WhatsApp and we will confirm straight away.</div>
+        </details>
+        <details class="faq__item">
+          <summary>Can I order only one meal?</summary>
+          <div class="faq__answer">Yes. A single meal is ₹80 and there is no minimum order. Most of our monthly customers started with one tiffin to check the taste first.</div>
+        </details>
+        <details class="faq__item">
+          <summary>Do you provide monthly subscriptions?</summary>
+          <div class="faq__answer">Yes. One tiffin a day is ₹2400 a month and lunch plus dinner is ₹4600 a month, both covering Monday to Saturday. Payment is made at the start of the cycle.</div>
+        </details>
+        <details class="faq__item">
+          <summary>How do I pay?</summary>
+          <div class="faq__answer">Cash on delivery, UPI, Google Pay or Paytm. Monthly plans are paid at the start of the cycle. There is no online payment on this website — everything is arranged directly with us.</div>
+        </details>
+        <details class="faq__item">
+          <summary>Do you offer customized meals?</summary>
+          <div class="faq__answer">Yes. We can reduce the spice, cook without onion and garlic, change the number of rotis, or leave out an item you do not eat. Tell us what you need on WhatsApp and we will confirm what is possible.</div>
+        </details>
+        <details class="faq__item">
+          <summary>Is the food prepared fresh every day?</summary>
+          <div class="faq__answer">Every tiffin is cooked the same morning it is delivered. Nothing is stored overnight and nothing is reheated from the day before.</div>
+        </details>
+      </div>
+
+      <div class="cta-inline reveal">
+        <p class="cta-inline__text">Still have a question?</p>
+        <a class="btn btn--wa btn--compact"
+           href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20have%20a%20question%3A%20"
+           aria-label="Ask a question on WhatsApp">Ask us on WhatsApp</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ CONTACT ══════════════════
+       ✏️ EDIT: PHONE NUMBERS — see EDITING-GUIDE.md section 5. Numbers appear
+       in tel: links, wa.me links and the JSON-LD schema. -->
+  <section class="section section--white" id="contact" aria-labelledby="contact-title">
+    <div class="container">
+      <div class="section__head reveal">
+        <p class="eyebrow">Talk to us</p>
+        <h2 class="section__title" id="contact-title">Contact SwaadSe Tiffin</h2>
+        <p class="section__lede">WhatsApp is fastest — we usually reply within a few minutes during kitchen hours.</p>
+      </div>
+
+      <div class="grid grid--3 reveal">
+        <div class="card info">
+          <p class="info__label">Call or WhatsApp</p>
+          <div class="phone-list">
+            <a class="phone phone--primary" href="tel:+917895590063">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.6 10.8c1.2 2.3 3.1 4.2 5.4 5.4l1.8-1.8c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.5.6.6 0 1 .4 1 1v3.1c0 .6-.4 1-1 1C10.6 20 4 13.4 4 5.2c0-.6.5-1 1-1h3.1c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.5.1.4 0 .8-.2 1l-1.9 1.1Z"/></svg>
+              78955 90063
+            </a>
+            <a class="phone" href="tel:+917900778393">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.6 10.8c1.2 2.3 3.1 4.2 5.4 5.4l1.8-1.8c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.5.6.6 0 1 .4 1 1v3.1c0 .6-.4 1-1 1C10.6 20 4 13.4 4 5.2c0-.6.5-1 1-1h3.1c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.5.1.4 0 .8-.2 1l-1.9 1.1Z"/></svg>
+              79007 78393
+            </a>
+            <a class="phone" href="tel:+918859008393">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.6 10.8c1.2 2.3 3.1 4.2 5.4 5.4l1.8-1.8c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.5.6.6 0 1 .4 1 1v3.1c0 .6-.4 1-1 1C10.6 20 4 13.4 4 5.2c0-.6.5-1 1-1h3.1c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.5.1.4 0 .8-.2 1l-1.9 1.1Z"/></svg>
+              88590 08393
+            </a>
+          </div>
+          <div style="display:grid;gap:.5rem;margin-top:1rem">
+            <a class="btn btn--wa btn--block"
+               href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20know%20about%20your%20daily%20tiffin%20service."
+               aria-label="Message SwaadSe Tiffin on WhatsApp">
+              <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2Zm5.8 14.06c-.24.68-1.4 1.3-1.93 1.35-.53.05-1.02.24-3.44-.72-2.92-1.15-4.75-4.2-4.9-4.4-.14-.19-1.15-1.53-1.15-2.92 0-1.39.73-2.07 1-2.36.26-.29.57-.36.76-.36l.55.01c.17 0 .41-.07.64.48.24.58.8 1.98.87 2.12.07.15.12.31.02.5-.1.19-.15.31-.29.48l-.44.5c-.14.14-.29.3-.13.58.17.29.75 1.23 1.6 2 1.11.98 2.04 1.29 2.33 1.44.29.14.46.12.63-.07.17-.2.72-.84.92-1.13.19-.29.39-.24.65-.14.27.09 1.67.78 1.96.93.29.14.48.22.55.34.07.13.07.72-.17 1.4Z"/></svg>
+              <span>Order on WhatsApp</span>
+            </a>
+            <a class="btn btn--call btn--block" href="tel:+917895590063" aria-label="Call SwaadSe Tiffin now">
+              <svg class="btn__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.6 10.8c1.2 2.3 3.1 4.2 5.4 5.4l1.8-1.8c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.5.6.6 0 1 .4 1 1v3.1c0 .6-.4 1-1 1C10.6 20 4 13.4 4 5.2c0-.6.5-1 1-1h3.1c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.5.1.4 0 .8-.2 1l-1.9 1.1Z"/></svg>
+              <span>Call Now</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="card info">
+          <p class="info__label">Kitchen address</p>
+          <address>
+            <strong>SwaadSe Tiffin</strong><br>
+            37/1 Om Vihar<br>
+            Kamla Nagar<br>
+            Agra, Uttar Pradesh 282005
+          </address>
+          <dl style="margin-top:.9rem">
+            <div class="info__row"><dt>Morning</dt><dd>7:00 AM – 9:00 AM</dd></div>
+            <div class="info__row"><dt>Evening</dt><dd>4:00 PM – 5:00 PM</dd></div>
+            <div class="info__row"><dt>Days</dt><dd>Mon–Sat</dd></div>
+          </dl>
+          <p class="info__closed">Sunday Closed</p>
+        </div>
+
+        <!-- The map iframe is injected on click. Loading Google Maps on page
+             load would add roughly a megabyte and wreck the LCP score. -->
+        <div class="map" data-map-src="https://www.google.com/maps?q=Kamla+Nagar,+Agra,+Uttar+Pradesh+282005&output=embed">
+          <svg class="map__pin" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg>
+          <p class="feature__text">37/1 Om Vihar, Kamla Nagar, Agra</p>
+          <div class="map__actions">
+            <button type="button" class="btn btn--ghost btn--compact js-load-map">Load map</button>
+            <a class="btn btn--ghost btn--compact" href="https://www.google.com/maps/search/?api=1&amp;query=Kamla+Nagar+Agra+282005"
+               target="_blank" rel="noopener">Open in Google Maps</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
 </main>
 
-<!-- SECTION: footer -->
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer__grid">
+
+      <div>
+        <p class="footer__title">SwaadSe Tiffin</p>
+        <address style="font-style:normal;line-height:1.8;font-size:.9375rem">
+          37/1 Om Vihar, Kamla Nagar<br>
+          Agra, Uttar Pradesh 282005<br>
+          <a href="tel:+917895590063">78955 90063</a> ·
+          <a href="tel:+917900778393">79007 78393</a><br>
+          <a href="tel:+918859008393">88590 08393</a>
+        </address>
+        <!-- ✏️ EDIT: add your FSSAI registration number between the brackets.
+             Food businesses in India are required to display it, and for a home
+             kitchen it is one of the strongest trust signals you have. -->
+        <p class="footer__note" style="margin-top:.8rem">FSSAI Reg. No.: [add your number]</p>
+      </div>
+
+      <div>
+        <p class="footer__title">Quick links</p>
+        <ul class="footer__links">
+          <li><a href="#plans">Meal Plans</a></li>
+          <li><a href="#todays-menu">Today's Menu</a></li>
+          <li><a href="#subscription">Monthly Subscription</a></li>
+          <li><a href="#packs">Food Packs</a></li>
+          <li><a href="#delivery">Delivery Information</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
+
+      <div>
+        <p class="footer__title">Kitchen hours</p>
+        <p class="footer__note" style="line-height:1.9">
+          Morning 7:00 AM – 9:00 AM<br>
+          Evening 4:00 PM – 5:00 PM<br>
+          Monday to Saturday<br>
+          <strong>Sunday Closed</strong>
+        </p>
+        <p class="footer__title" style="margin-top:1.25rem">Legal</p>
+        <ul class="footer__links">
+          <li><a href="privacy.html">Privacy Policy</a></li>
+          <li><a href="terms.html">Terms &amp; Conditions</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="footer__bottom">
+      <!-- ✏️ EDIT: update the year each January. -->
+      <p>© 2026 SwaadSe Tiffin. Pure vegetarian home kitchen in Agra.</p>
+      <!-- ✏️ EDIT: replace the # with your real profile links, or delete any
+           icon you do not use. -->
+      <div class="social">
+        <a href="#" rel="noopener" aria-label="SwaadSe Tiffin on Instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2c3.2 0 3.6 0 4.9.07 1.2.05 1.8.25 2.2.42.6.23 1 .5 1.4.94.44.44.71.84.94 1.4.17.44.37 1 .42 2.2.06 1.3.07 1.7.07 4.9s0 3.6-.07 4.9c-.05 1.2-.25 1.8-.42 2.2-.23.6-.5 1-.94 1.4-.44.44-.84.71-1.4.94-.44.17-1 .37-2.2.42-1.3.06-1.7.07-4.9.07s-3.6 0-4.9-.07c-1.2-.05-1.8-.25-2.2-.42-.6-.23-1-.5-1.4-.94-.44-.44-.71-.84-.94-1.4-.17-.44-.37-1-.42-2.2C2.2 15.6 2.2 15.2 2.2 12s0-3.6.07-4.9c.05-1.2.25-1.8.42-2.2.23-.6.5-1 .94-1.4.44-.44.84-.71 1.4-.94.44-.17 1-.37 2.2-.42C8.4 2.2 8.8 2.2 12 2.2Zm0 5a4.8 4.8 0 1 0 0 9.6 4.8 4.8 0 0 0 0-9.6Zm0 7.92a3.12 3.12 0 1 1 0-6.24 3.12 3.12 0 0 1 0 6.24Zm6.12-8.1a1.12 1.12 0 1 1-2.24 0 1.12 1.12 0 0 1 2.24 0Z"/></svg>
+        </a>
+        <a href="#" rel="noopener" aria-label="SwaadSe Tiffin on Facebook">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.5 21v-8h2.7l.4-3.1h-3.1V7.9c0-.9.25-1.5 1.55-1.5h1.65V3.6c-.8-.1-1.7-.15-2.5-.15-2.5 0-4.2 1.5-4.2 4.3V9.9H7.3V13h2.2v8h4Z"/></svg>
+        </a>
+        <a href="https://wa.me/917895590063?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20know%20about%20your%20daily%20tiffin%20service." rel="noopener" aria-label="SwaadSe Tiffin on WhatsApp">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22h.01c5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2Zm5.8 14.06c-.24.68-1.4 1.3-1.93 1.35-.53.05-1.02.24-3.44-.72-2.92-1.15-4.75-4.2-4.9-4.4-.14-.19-1.15-1.53-1.15-2.92 0-1.39.73-2.07 1-2.36.26-.29.57-.36.76-.36l.55.01c.17 0 .41-.07.64.48.24.58.8 1.98.87 2.12.07.15.12.31.02.5-.1.19-.15.31-.29.48l-.44.5c-.14.14-.29.3-.13.58.17.29.75 1.23 1.6 2 1.11.98 2.04 1.29 2.33 1.44.29.14.46.12.63-.07.17-.2.72-.84.92-1.13.19-.29.39-.24.65-.14.27.09 1.67.78 1.96.93.29.14.48.22.55.34.07.13.07.72-.17 1.4Z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>
 
 <!-- Persistent CTAs. One set of markup, re-laid-out by media query:
      a split bottom bar on phones, a circular FAB stack on desktop. -->

@@ -165,7 +165,10 @@ h1, h2, h3, .price, .plan__name {
   margin-bottom: .6rem;
 }
 
+/* Standalone links get a 24px minimum height (WCAG 2.2 target size). Links that
+   sit inside a sentence are exempt, but none of these do. */
 .link-arrow {
+  display: inline-flex; align-items: center; min-height: 24px;
   font-family: var(--font-display); font-weight: 700; font-size: var(--fs-sm);
   color: var(--saffron-deep); text-decoration: none;
 }
@@ -268,8 +271,8 @@ h1, h2, h3, .price, .plan__name {
 .hero__grid { display: grid; gap: clamp(1.5rem, 4vw, 3rem); }
 .hero__title { font-size: var(--fs-h1); margin-bottom: .7rem; }
 .hero__sub {
-  font-size: clamp(1rem, 2.4vw, 1.1875rem); color: var(--ink-muted);
-  max-width: 34ch; margin-bottom: 1.4rem;
+  font-size: clamp(1rem, 2.4vw, 1.1875rem); line-height: 1.5;
+  color: var(--ink-muted); max-width: 34ch; margin-bottom: 1.4rem;
 }
 .hero__actions { display: grid; gap: .7rem; margin-bottom: 1.3rem; }
 
@@ -288,16 +291,16 @@ h1, h2, h3, .price, .plan__name {
 }
 .dabba-tag__value { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-sm); }
 
-.chips { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: 1.4rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: 1.4rem; }
 .chip {
-  display: inline-flex; align-items: center; gap: .4rem;
-  padding: .38rem .75rem; font-size: var(--fs-xs); font-weight: 500;
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .3rem .6rem; font-size: .75rem; font-weight: 500; line-height: 1.35;
   background: var(--surface); border: 1px solid var(--line);
   border-radius: var(--r-btn); color: var(--ink);
 }
 .chip__icon {
-  width: 15px; height: 15px; flex: none; fill: none;
-  stroke: var(--leaf); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+  width: 13px; height: 13px; flex: none; fill: none;
+  stroke: var(--leaf); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
 }
 .chip__icon .fill { fill: var(--leaf); stroke: none; }
 
@@ -534,7 +537,10 @@ h1, h2, h3, .price, .plan__name {
 .site-footer a:hover { text-decoration: underline; }
 .footer__grid { display: grid; gap: 1.75rem; }
 .footer__title { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-sm); letter-spacing: .1em; text-transform: uppercase; color: #C9BDB4; margin-bottom: .7rem; }
-.footer__links { display: grid; gap: .45rem; font-size: var(--fs-sm); }
+.footer__links { display: grid; gap: .3rem; font-size: var(--fs-sm); }
+/* Stacked footer links are navigation, not prose, so they need a real target. */
+.footer__links a,
+.site-footer address a { display: inline-flex; align-items: center; min-height: 24px; }
 .footer__note { font-size: var(--fs-xs); color: #B9ADA4; }
 .footer__bottom {
   display: flex; flex-wrap: wrap; gap: .75rem; justify-content: space-between; align-items: center;

@@ -16,7 +16,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const read = f => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
-const html = read('index.html');
+const raw = read('index.html');
+
+/** Structural assertions must ignore HTML comments — this file is heavily
+ *  commented for the owner, and a comment mentioning <h1> is not a heading. */
+const stripComments = s => s.replace(/<!--[\s\S]*?-->/g, '');
+const html = stripComments(raw);
 
 const jsonLd = () =>
   [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)]
@@ -110,4 +115,39 @@ test('aggregateRating is not published while reviews are placeholders', () => {
   const biz = jsonLd().find(b => b['@type'] === 'FoodEstablishment');
   assert.equal(biz.aggregateRating, undefined,
     'publishing ratings for reviews that do not exist risks a Google penalty');
+});
+
+// ─── images & payload ────────────────────────────────────────────────────────
+test('every image is dimensioned, described, and lazy except the hero', () => {
+  const tags = html.match(/<img[^>]*>/g) || [];
+  assert.ok(tags.length >= 5, `expected several images, found ${tags.length}`);
+  for (const tag of tags) {
+    assert.match(tag, /\salt="/, `missing alt (use alt="" if decorative): ${tag}`);
+    assert.match(tag, /\swidth="\d+"/, `missing width — causes layout shift: ${tag}`);
+    assert.match(tag, /\sheight="\d+"/, `missing height — causes layout shift: ${tag}`);
+    if (!tag.includes('fetchpriority="high"'))
+      assert.match(tag, /loading="lazy"/, `should be lazy-loaded: ${tag}`);
+  }
+  assert.equal((html.match(/fetchpriority="high"/g) || []).length, 1,
+    'exactly one image should be prioritised, or LCP has competition');
+});
+
+test('nothing loads from a third-party origin on first paint', () => {
+  const allowed = [
+    'https://wa.me/',                      // outbound tap, not a page load
+    'https://www.google.com/maps',         // outbound link + click-to-load facade
+    'https://swaadsetiffin.in',            // our own canonical / og:url
+  ];
+  for (const [, url] of html.matchAll(/(?:src|href)="(https?:\/\/[^"]+)"/g))
+    assert.ok(allowed.some(a => url.startsWith(a)), `unexpected external request: ${url}`);
+});
+
+test('legal pages exist, are substantial, and link back', () => {
+  for (const file of ['privacy.html', 'terms.html']) {
+    const page = read(file);
+    assert.ok(page.length > 1200, `${file} is too thin to be a real policy`);
+    assert.match(page, /<html[^>]+lang="en-IN"/);
+    assert.match(page, /href="index\.html"|href="\/"/, `${file} needs a link home`);
+    assert.match(page, /SwaadSe Tiffin/);
+  }
 });

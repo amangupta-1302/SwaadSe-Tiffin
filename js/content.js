@@ -83,5 +83,72 @@ window.SITE = {
   deliveryWindows: [
     { label: "7:00 – 9:00 AM", startHour: 7, endHour: 9 },
     { label: "4:00 – 5:00 PM", startHour: 16, endHour: 17 }
-  ]
+  ],
+
+  /* ── Prices ────────────────────────────────────────────────────────────────
+     Every price on the website, in rupees.
+
+     Write the NUMBER ONLY. No ₹ sign, no comma, no quote marks:
+
+         "plan-basic": 80          ✅ correct
+         "plan-basic": "₹80"       ❌ wrong — the website will show nothing
+         "plan-basic": 1,200       ❌ wrong — write 1200
+
+     Changing a number here changes it everywhere on the website at once:
+     the price on the card AND the price inside the WhatsApp message the
+     customer sends you. You never have to change the same price twice.
+
+     Do not rename the words on the left. The website finds each price by
+     that exact name.                                                        */
+  prices: {
+
+    /* The four tiffin plans — price per meal */
+    "plan-basic": 80,
+    "plan-standard": 120,
+    "plan-premium": 150,
+    "plan-deluxe": 170,
+
+    /* Monthly subscription band */
+    "tier-lunch-dinner": 4600,
+    "tier-one-meal": 2400,
+    "tier-single": 80,
+
+    /* Food packs, ordered on their own */
+    "pack-dal": 180,
+    "pack-rice": 140,
+    "pack-roti": 80,
+    "pack-shahi-paneer": 220,
+    "pack-butter-paneer": 260,
+    "pack-raita": 140,
+    "pack-mutter-paneer": 140,
+    "pack-naan": 50
+  },
+
+  /* ── Phone numbers and address ─────────────────────────────────────────────
+     Changing a number here changes it everywhere on the website: every Call
+     button, every WhatsApp button, the contact section and the footer.
+
+     Write phone numbers as 10 digits with NO spaces, no +91, no dashes:
+
+         "7895590063"      ✅ correct
+         "78955 90063"     ❌ wrong
+         "+91 78955 90063" ❌ wrong
+
+     The website adds the +91 and the space itself.                          */
+  contact: {
+
+    /* The number that receives WhatsApp messages. This one keeps the 91 in
+       front, because WhatsApp needs the country code. */
+    whatsapp: "917895590063",
+
+    /* Numbers customers can call. The first one is the main number and is used
+       by every "Call Now" button. List one, two or three. */
+    phones: ["7895590063", "7900778393", "8859008393"],
+
+    /* The kitchen address, one line per box. */
+    addressLine1: "37/1 Om Vihar",
+    addressLine2: "Kamla Nagar",
+    city: "Agra",
+    statePin: "Uttar Pradesh 282005"
+  }
 };

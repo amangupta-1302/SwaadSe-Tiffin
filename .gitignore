@@ -1,4 +1,10 @@
 .DS_Store
 images/originals/
-.htpasswd
-*.htpasswd
+.impeccable/
+
+# The save function's settings live in Netlify's environment variables, never in
+# the repo. `netlify dev` reads a local .env, which would hold a real GitHub
+# token — committing that hands over write access to this repository.
+.env
+.env.*
+.netlify/

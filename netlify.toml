@@ -1,0 +1,35 @@
+# ============================================================================
+#  Netlify configuration
+# ============================================================================
+#  There is no build step. Netlify publishes the repository as-is and runs two
+#  functions: netlify/functions/save.mjs, which /admin/ calls to save changes,
+#  and netlify/functions/ping.mjs, a daily tick that keeps the free Supabase
+#  project from pausing.
+#
+#  Required environment variables — set these in the Netlify UI under
+#  Site configuration → Environment variables, never in this file:
+#
+#    SUPABASE_URL        the project URL, e.g. https://abcdefgh.supabase.co
+#    SUPABASE_ANON_KEY   the project's public (anon) API key
+#    ADMIN_EMAIL         the one account allowed to save changes
+#    GITHUB_TOKEN        fine-grained token, Contents: read+write, this repo only
+#    GITHUB_REPO         owner/repository, e.g. amann/swaadse-tiffin
+#    GITHUB_BRANCH       optional, defaults to main
+#
+#  Full walkthrough: DEPLOY.md
+# ============================================================================
+
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# The owner logs in on /admin/ through Supabase; every save is verified
+# server-side in the save function. /admin/ itself is safe to reach: it holds
+# no credentials and cannot write anything.
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"

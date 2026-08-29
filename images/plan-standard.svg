@@ -1,11 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img" aria-label="Standard Veg Tiffin placeholder">
-  <rect width="600" height="600" fill="#FFF8F0"/>
-  <rect x="1" y="1" width="598" height="598" fill="none" stroke="#E4E0D8" stroke-width="2" stroke-dasharray="10 8"/>
-  <circle cx="300" cy="270" r="102.00000000000001" fill="none" stroke="#F57C00" stroke-width="5.610000000000001"/>
-  <circle cx="300" cy="270" r="63.24000000000001" fill="none" stroke="#E4E0D8" stroke-width="4.590000000000001"/>
-  <text x="300" y="441" text-anchor="middle" fill="#6B5D54"
-    font-family="system-ui, sans-serif" font-size="35"
-    font-weight="600" letter-spacing="1.5">Standard Veg Tiffin</text>
-  <text x="300" y="477" text-anchor="middle" fill="#E4E0D8"
-    font-family="system-ui, sans-serif" font-size="25">replace with a real photo · 600×600</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" role="img" aria-label="Three-tier tiffin with raita and salad">
+<rect width="600" height="600" fill="#FFF8F0"/>
+
+  <ellipse cx="300" cy="465.59999999999997" rx="158.4" ry="11" fill="#C9C3B8" opacity=".4"/>
+  
+  <rect x="168" y="352.8" width="264" height="79.2" rx="17.424" fill="#FFFFFF" stroke="#C9C3B8" stroke-width="3.5"/>
+  <rect x="180" y="376.56" width="240" height="34.848" rx="12.672" fill="#E9A33C"/>
+  <rect x="154.5" y="337.2" width="291" height="29.639999999999997" rx="11.7" fill="#E4E0D8" stroke="#C9C3B8" stroke-width="3"/>
+  <rect x="168" y="247.2" width="264" height="79.2" rx="17.424" fill="#FFFFFF" stroke="#C9C3B8" stroke-width="3.5"/>
+  <rect x="180" y="270.96" width="240" height="34.848" rx="12.672" fill="#57A05A"/>
+  <rect x="154.5" y="231.6" width="291" height="29.639999999999997" rx="11.7" fill="#E4E0D8" stroke="#C9C3B8" stroke-width="3"/>
+  <rect x="168" y="141.60000000000002" width="264" height="79.2" rx="17.424" fill="#FFFFFF" stroke="#C9C3B8" stroke-width="3.5"/>
+  <rect x="180" y="165.36" width="240" height="34.848" rx="12.672" fill="#FBF3E6"/>
+  <rect x="154.5" y="126.00000000000003" width="291" height="29.639999999999997" rx="11.7" fill="#E4E0D8" stroke="#C9C3B8" stroke-width="3"/>
+  <path d="M249.84 126.00000000000003 a 50.160000000000004 42.24 0 0 1 100.32000000000001 0"
+        fill="none" stroke="#C9C3B8" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="300" cy="85.08000000000003" r="7" fill="#F57C00"/>
 </svg>

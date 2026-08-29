@@ -1,13 +1,22 @@
 # Photos: what to shoot and where it goes
 
-Every image on the site right now is a **placeholder** — a cream box with a plate
-outline and a label. Replace each one with a real photo using the **same
-filename**, and nothing in the code needs to change.
+Every image on the site right now is a **drawing**, not a photograph — a thali,
+stacked tiffin tiers, a kitchen. They are there so the site looks finished while
+you get the real photos taken. Replace each one using the **same filename** and
+nothing in the code needs to change.
 
-Real photos of your actual food beat stock photography for a local business. A
-customer in Kamla Nagar can tell the difference between a studio thali and the
-tiffin that will arrive at their door, and the second one is what makes them
-subscribe.
+They are deliberately drawings rather than stock photos of someone else's food.
+A customer in Kamla Nagar can tell the difference between a studio thali and the
+tiffin that will actually arrive at their door, and the second one is what makes
+them subscribe. **Photographs of your own food will beat these drawings every
+time** — treat them as a stand-in with a deadline, not as finished artwork.
+
+One thing to keep if you redraw them: on the four plan cards, the number of
+tiffin tiers matches the size of the plan — two for Basic, four for Deluxe, with
+white paneer cubes on the two plans that include paneer. The picture tells a
+customer which plan is bigger before they read the price.
+
+Regenerate them any time with `node tools/make-placeholders.mjs`.
 
 ## The list
 

@@ -7,12 +7,14 @@
  *
  *    1. "Next delivery" tag shows the real next window
  *    2. Today's Special + the weekly menu render from js/content.js
- *    3. the week collapses into day tabs and opens on today
- *    4. header gets a shadow once scrolled
- *    5. mobile nav opens / closes
- *    6. sections fade in on scroll (skipped if the visitor prefers less motion)
- *    7. only one FAQ answer stays open at a time
- *    8. Google Maps loads on click, so it costs nothing until it is wanted
+ *    3. every price comes from js/content.js, links included
+ *    4. phone numbers and the address come from js/content.js too
+ *    5. the week collapses into day tabs and opens on today
+ *    6. header gets a shadow once scrolled
+ *    7. mobile nav opens / closes
+ *    8. sections fade in on scroll (skipped if the visitor prefers less motion)
+ *    9. only one FAQ answer stays open at a time
+ *   10. Google Maps loads on click, so it costs nothing until it is wanted
  *
  *  The date logic at the top is pure and unit-tested in tests/schedule.test.mjs.
  *  Do not put wording that customers read in this file — it belongs in
@@ -85,7 +87,92 @@
   const special = $('#todays-special');
   if (special && SITE && SITE.todaysSpecial) special.textContent = SITE.todaysSpecial;
 
-  /* ── 3. weekly menu: render from content.js, then collapse into tabs ───── */
+  /* ── 3. prices ─────────────────────────────────────────────────────────────
+     Every element tagged data-price="<key>" takes its amount from
+     SITE.prices, so the owner changes a price in one place.
+
+     On a link, the amount lives inside the prefilled WhatsApp message rather
+     than in the text, so the URL is rewritten instead. Miss this and the
+     customer taps "Order This Plan" and sends a price we no longer charge.
+
+     The amounts written into index.html stay as the fallback for a visitor
+     with JavaScript off, so an unknown or malformed key leaves them alone. */
+  const prices = SITE && SITE.prices;
+  if (prices) {
+    for (const el of $$('[data-price]')) {
+      const value = prices[el.dataset.price];
+      if (!Number.isInteger(value) || value <= 0) continue;
+      if (el.tagName === 'A') {
+        // getAttribute, not .href: the raw attribute keeps %E2%82%B9 encoded.
+        el.setAttribute('href', el.getAttribute('href').replace(/%E2%82%B9\d+/, `%E2%82%B9${value}`));
+      } else {
+        el.textContent = `₹${value}`;
+      }
+    }
+
+    /* "Saves ₹200 vs two single plans" — a claim, so it has to be recomputed
+       rather than left as text. If the monthly pair stops being cheaper, the
+       badge goes rather than lies. */
+    const saves = $('.js-saves');
+    if (saves) {
+      const saved = 2 * prices['tier-one-meal'] - prices['tier-lunch-dinner'];
+      if (Number.isInteger(saved) && saved > 0) saves.textContent = `Saves ₹${saved} vs two single plans`;
+      else saves.remove();
+    }
+  }
+
+  /* ── 4. phone numbers and address ──────────────────────────────────────────
+     Every WhatsApp link uses the one WhatsApp number, so those are found by
+     selector rather than tagged 25 times over. Call links differ, so each
+     carries data-phone="<index into contact.phones>" — on the <a> it sets the
+     tel: href, on a <span> it sets the number as customers read it. Address
+     lines come from data-contact="<which line>".
+
+     As with prices, the amounts and numbers written into index.html remain the
+     fallback for a visitor with JavaScript off. */
+  const contact = SITE && SITE.contact;
+  if (contact) {
+    // 91 for India, digits only, because that is what wa.me expects in a path.
+    const waNumber = String(contact.whatsapp || '').replace(/\D/g, '');
+    if (waNumber) {
+      for (const link of $$('a[href*="wa.me/"]')) {
+        link.setAttribute('href', link.getAttribute('href').replace(/wa\.me\/\d+/, `wa.me/${waNumber}`));
+      }
+    }
+
+    const phones = (Array.isArray(contact.phones) ? contact.phones : [])
+      .map(number => String(number).replace(/\D/g, ''))
+      .filter(Boolean);
+
+    for (const el of $$('[data-phone]')) {
+      const number = phones[Number(el.dataset.phone)];
+      // Missing or unusable: leave the number written into index.html alone,
+      // the same rule prices follow. Removing the link instead would strip a
+      // number but leave the " · " and <br> that separated it in the footer.
+      if (!number) continue;
+      if (el.tagName === 'A') el.setAttribute('href', `tel:+91${number}`);
+      // 10 digits read as two groups of five on every Indian bill and card.
+      else el.textContent = number.length === 10 ? `${number.slice(0, 5)} ${number.slice(5)}` : number;
+    }
+
+    const line1 = String(contact.addressLine1 || '').trim();
+    const line2 = String(contact.addressLine2 || '').trim();
+    const city = String(contact.city || '').trim();
+    const statePin = String(contact.statePin || '').trim();
+    const address = {
+      line1,
+      line2,
+      'city-state': [city, statePin].filter(Boolean).join(', '),
+      street: [line1, line2].filter(Boolean).join(', '),
+      short: [line1, line2, city].filter(Boolean).join(', '),
+    };
+    for (const el of $$('[data-contact]')) {
+      const value = address[el.dataset.contact];
+      if (value) el.textContent = value;
+    }
+  }
+
+  /* ── 5. weekly menu: render from content.js, then collapse into tabs ───── */
   const menu = $('.js-menu');
   if (menu && SITE && Array.isArray(SITE.weeklyMenu) && SITE.weeklyMenu.length) {
     const tabList = $('.menu__tabs', menu);
@@ -107,6 +194,7 @@
       tab.setAttribute('role', 'tab');
       tab.setAttribute('aria-controls', id);
       if (entry.closed) tab.dataset.closed = 'true';
+      if (i === menuIndexFor(new Date())) tab.dataset.today = 'true';
       tab.textContent = entry.short || entry.day;
       tabList.append(tab);
       tabs.push(tab);
@@ -130,12 +218,13 @@
       } else {
         const list = document.createElement('ul');
         list.className = 'menu__items';
-        for (const item of entry.items) {
+        entry.items.forEach((item, index) => {
           const li = document.createElement('li');
           li.className = 'menu__item';
+          li.style.setProperty('--i', index);   // staggers the lay-out, see styles.css §10
           li.textContent = item;
           list.append(li);
-        }
+        });
         panel.append(list);
       }
 
@@ -149,7 +238,13 @@
         tab.setAttribute('aria-selected', String(on));
         tab.tabIndex = on ? 0 : -1;         // the tablist is one stop in tab order
         panels[i].hidden = !on;
+        panels[i].classList.remove('is-laying');
       });
+      /* Replay the stagger on every change, not only the first paint. Reading
+         offsetWidth forces the class removal to land before it is re-added;
+         without it the browser folds both into one frame and nothing moves. */
+      void panels[index].offsetWidth;
+      panels[index].classList.add('is-laying');
       if (moveFocus) tabs[index].focus();
     };
 
@@ -177,7 +272,7 @@
     select(Math.min(menuIndexFor(new Date()), tabs.length - 1));
   }
 
-  /* ── 4. header shadow ──────────────────────────────────────────────────── */
+  /* ── 6. header shadow ──────────────────────────────────────────────────── */
   const header = $('.site-header');
   if (header) {
     const onScroll = () => header.classList.toggle('is-scrolled', window.scrollY > 8);
@@ -185,7 +280,7 @@
     onScroll();
   }
 
-  /* ── 5. mobile nav ─────────────────────────────────────────────────────── */
+  /* ── 7. mobile nav ─────────────────────────────────────────────────────── */
   const toggle = $('.js-nav-toggle');
   const nav = $('#site-nav');
   if (toggle && nav) {
@@ -205,7 +300,19 @@
     });
   }
 
-  /* ── 6. reveal on scroll ───────────────────────────────────────────────── */
+  /* ── 8. reveal on scroll ─────────────────────────────────────────────────
+     A grid marked .reveal hands that job to its children instead, each numbered
+     so they land in sequence rather than as one slab. This has to happen before
+     the observer collects .reveal below, or the children are never watched.
+     The cap keeps the food-pack grid from taking most of a second to arrive. */
+  for (const group of $$('.grid.reveal, .tiers.reveal, .steps.reveal')) {
+    group.classList.remove('reveal');
+    [...group.children].forEach((child, i) => {
+      child.classList.add('reveal');
+      child.style.setProperty('--i', Math.min(i, 8));
+    });
+  }
+
   const reveals = $$('.reveal');
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
     const io = new IntersectionObserver((entries, obs) => {
@@ -220,7 +327,7 @@
     reveals.forEach(el => el.classList.add('is-visible'));
   }
 
-  /* ── 7. FAQ: one answer open at a time ─────────────────────────────────── */
+  /* ── 9. FAQ: one answer open at a time ─────────────────────────────────── */
   const faqItems = $$('.faq__item');
   faqItems.forEach(item => {
     item.addEventListener('toggle', () => {
@@ -229,7 +336,7 @@
     });
   });
 
-  /* ── 8. map on demand ──────────────────────────────────────────────────── */
+  /* ── 10. map on demand ──────────────────────────────────────────────────── */
   const mapBtn = $('.js-load-map');
   if (mapBtn) {
     mapBtn.addEventListener('click', () => {

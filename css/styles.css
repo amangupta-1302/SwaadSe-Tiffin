@@ -58,6 +58,35 @@
   --sh-1: 0 1px 2px rgba(42, 35, 32, .05), 0 4px 14px rgba(42, 35, 32, .05);
   --sh-2: 0 10px 30px rgba(42, 35, 32, .10);
   --bar-h: 64px;
+
+  /* Nested enclosure ("double bezel"). A card is a machined tray holding a
+     plate: an outer shell with its own fill and hairline, and an inner core
+     inset by --bezel. The two radii are concentric — the inner one is the
+     outer minus the inset — or the curves visibly disagree at the corners. */
+  --bezel: 6px;
+  --bezel-sm: 4px;
+  --r-shell: 30px;
+  --r-core: calc(var(--r-shell) - var(--bezel));
+  --shell: rgba(42, 35, 32, .045);
+  --hairline: rgba(42, 35, 32, .07);
+
+  /* Diffused ambient light rather than a drop shadow. Three stacked layers at
+     low alpha read as depth; one dark layer reads as a sticker. */
+  --sh-float:
+    0 2px 4px rgba(42, 35, 32, .03),
+    0 12px 28px -6px rgba(42, 35, 32, .07),
+    0 32px 64px -16px rgba(42, 35, 32, .06);
+  --sh-lift:
+    0 4px 8px rgba(42, 35, 32, .04),
+    0 18px 40px -8px rgba(42, 35, 32, .10),
+    0 44px 80px -20px rgba(42, 35, 32, .08);
+
+  /* motion — one decelerating curve with weight to it, used everywhere.
+     `ease` and `ease-in-out` are symmetrical and read as mechanical. */
+  --ease-spring: cubic-bezier(.32, .72, 0, 1);
+  --ease-out: cubic-bezier(.22, .61, .36, 1);
+
+  --space-section: clamp(6rem, 10vw, 10rem);
 }
 
 /* ── 2. fonts ────────────────────────────────────────────────────────────── */
@@ -100,7 +129,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 76px;   /* anchor targets clear the sticky header */
+  scroll-padding-top: 112px;  /* anchor targets clear the floating nav pill */
   -webkit-text-size-adjust: 100%;
 }
 
@@ -112,6 +141,22 @@ body {
   background: var(--cream);
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+}
+
+/* Film grain. Flat cream at this scale looks like unprinted screen; a trace of
+   noise gives it the tooth of paper. Generated inline as an SVG data URI, so it
+   costs no request and cannot violate the no-third-party-origin rule.
+   FIXED and pointer-events:none deliberately — attached to a scrolling element
+   it would repaint the whole layer on every frame. If a mid-range Android field
+   test shows scroll jank, this rule is the first thing to delete. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  opacity: .028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 img, svg { display: block; max-width: 100%; }
@@ -149,6 +194,45 @@ h1, h2, h3, .price, .plan__name {
 }
 .skip-link:focus-visible { transform: translate(-50%, 0); }
 
+/* ── the nested enclosure ────────────────────────────────────────────────────
+   A card is a tray holding a plate. The outer element is the tray: a barely
+   tinted fill with a hairline. The ::before is the plate: the real white
+   surface, inset by --bezel, with its own top highlight and its own shadow.
+   Content rides above both.
+
+   A pseudo-element rather than two wrapper divs on purpose. There are 35 cards;
+   wrapping each would be 70 markup edits, would put a <div> between <ul> and
+   <li> in four places, and would leave the structure impossible to change again
+   without touching every section. The look is identical.
+
+   THIS LIVES IN §4, NOT BESIDE THE CARDS IN §8, AND THAT IS LOAD-BEARING.
+   It is a base that later rules customise — .special recolours the plate in §7,
+   .faq__item retunes the padding in §8 — and every one of those overrides has
+   the same specificity as this rule, so the cascade is decided purely by which
+   comes first in the file. Declared down in §8 it silently beat the hero's own
+   .special rules: the 4px saffron edge that block asked for never rendered, and
+   nothing failed. Anything sharing this enclosure must be declared after it. */
+.card, .menu__panel, .special, .faq__item {
+  position: relative;
+  padding: calc(var(--bezel) + 1.4rem);
+  background: var(--shell);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-shell);
+  transition: transform .6s var(--ease-spring);
+}
+.card::before, .menu__panel::before, .special::before, .faq__item::before {
+  content: "";
+  position: absolute; inset: var(--bezel); z-index: 0;
+  background: var(--surface);
+  border-radius: var(--r-core);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .9), var(--sh-float);
+  transition: box-shadow .6s var(--ease-spring);
+}
+/* Everything the author put in the card sits on the plate, not under it.
+   .plan__badge re-declares position:absolute later in the file and wins on
+   source order, so it still hangs off the top edge. */
+.card > *, .menu__panel > *, .special > *, .faq__item > * { position: relative; z-index: 1; }
+
 /* Signature divider: a hairline broken by a single rivet, after the clasp on a
    steel tiffin. Used between sections instead of a plain border. */
 .rule { position: relative; height: 1px; background: var(--line); border: 0; }
@@ -159,11 +243,23 @@ h1, h2, h3, .price, .plan__name {
   transform: translate(-50%, -50%);
 }
 
-.eyebrow {
-  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xs);
-  letter-spacing: .13em; text-transform: uppercase; color: var(--saffron-deep);
-  margin-bottom: .6rem;
+/* Eyebrows are pill badges, not floating uppercase text — a section title needs
+   something to sit against, or it reads as the top of the page every time.
+   Small type with wide tracking has to be measured on the fill it actually sits
+   on, so both pairs below are asserted in tests/audit.test.mjs. */
+.eyebrow, .info__label, .special__label {
+  display: inline-block;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: .625rem; line-height: 1.6;
+  letter-spacing: .2em; text-transform: uppercase;
+  color: var(--saffron-deep); background: var(--saffron-wash);
+  padding: .3rem .75rem; border-radius: var(--r-btn);
+  margin-bottom: .9rem;
 }
+/* On the green band the pill DARKENS, for the same reason the tier cards do:
+   a translucent white fill raises the background luminance until light text
+   drops under AA. Darkening moves the ratio the right way. */
+.band--green .eyebrow { background: rgba(0, 0, 0, .18); }
 
 /* Standalone links get a 24px minimum height (WCAG 2.2 target size). Links that
    sit inside a sentence are exempt, but none of these do. */
@@ -182,47 +278,136 @@ h1, h2, h3, .price, .plan__name {
 
 /* ── 5. buttons ──────────────────────────────────────────────────────────── */
 .btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
+  position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: .7rem;
   min-height: var(--tap); padding: .8rem 1.4rem;
   font-family: var(--font-display); font-weight: 700; font-size: 1rem;
   letter-spacing: -0.01em; text-decoration: none; text-align: center;
   border: 0; border-radius: var(--r-btn); cursor: pointer;
-  transition: background-color .18s ease, transform .18s ease, box-shadow .18s ease;
+  transition: background-color .45s var(--ease-spring),
+              transform .45s var(--ease-spring),
+              box-shadow .45s var(--ease-spring);
 }
-.btn__icon { width: 20px; height: 20px; flex: none; fill: currentColor; }
-.btn--lg { min-height: 56px; padding: .95rem 1.6rem; font-size: 1.0625rem; width: 100%; }
+
+/* The trailing icon never sits naked next to the label — it gets its own
+   circular well, so the button reads as a machined control with a part seated
+   inside it rather than a coloured rectangle with a picture on it.
+   `order` does the moving: the SVG comes FIRST in the DOM and the label second.
+   Both icons are aria-hidden="true", so visual order is free to differ from
+   source order without costing a screen reader anything. */
+.btn__icon {
+  order: 1;
+  box-sizing: content-box;
+  width: 20px; height: 20px; flex: none; fill: currentColor;
+  padding: 8px; border-radius: 50%;
+  background: rgba(0, 0, 0, .10);
+  transition: transform .5s var(--ease-spring), background-color .5s var(--ease-spring);
+}
+
+.btn--lg { min-height: 60px; font-size: 1.0625rem; width: 100%; }
 .btn--compact { min-height: 42px; padding: .45rem 1rem; font-size: var(--fs-sm); }
 .btn--block { width: 100%; }
 
-.btn--wa { background: var(--wa); color: var(--wa-ink); box-shadow: var(--sh-1); }
-.btn--call { background: var(--saffron); color: var(--saffron-ink); box-shadow: var(--sh-1); }
+/* Full-bleed CTAs pin the well flush with the right inner edge. Padding stays
+   symmetrical so the label is still optically centred — the well is out of flow
+   and would otherwise drag the text off-centre by its own width. */
+.btn--lg, .btn--block { padding-inline: 3.5rem; }
+.btn--lg .btn__icon,
+.btn--block .btn__icon {
+  position: absolute; right: .5rem; top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Primary CTAs with no icon of their own ("Order This Plan") get the same well
+   with an arrow in it, so a row of plan cards is not half chipped and half not.
+   ↗ is outside the Anek subset by design — it renders from the system stack,
+   which is why the family is named explicitly rather than inherited.
+   Browsers without :has() simply get no arrow, which costs nothing. */
+.btn--lg:not(:has(.btn__icon))::after,
+.btn--block:not(:has(.btn__icon))::after {
+  content: "↗";
+  position: absolute; right: .5rem; top: 50%;
+  display: grid; place-items: center;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: rgba(0, 0, 0, .10);
+  font-family: var(--font-body); font-size: .9rem; line-height: 1;
+  transform: translateY(-50%);
+  transition: transform .5s var(--ease-spring), background-color .5s var(--ease-spring);
+}
+
+/* Both fills keep near-black labels. White on either is a documented WCAG
+   failure (2.70:1 and 1.98:1) and tests/audit.test.mjs fails if it returns. */
+.btn--wa { background: var(--wa); color: var(--wa-ink); box-shadow: var(--sh-float); }
+.btn--call { background: var(--saffron); color: var(--saffron-ink); box-shadow: var(--sh-float); }
 .btn--ghost {
   background: transparent; color: var(--ink);
-  box-shadow: inset 0 0 0 1.5px var(--steel);
+  box-shadow: inset 0 0 0 1.5px var(--hairline);
 }
 .btn--on-green { background: #fff; color: var(--leaf-deep); }
 
 @media (hover: hover) {
-  .btn--wa:hover { background: var(--wa-hover); transform: translateY(-1px); box-shadow: var(--sh-2); }
-  .btn--call:hover { background: var(--saffron-hover); transform: translateY(-1px); box-shadow: var(--sh-2); }
+  .btn--wa:hover { background: var(--wa-hover); transform: translateY(-2px); box-shadow: var(--sh-lift); }
+  .btn--call:hover { background: var(--saffron-hover); transform: translateY(-2px); box-shadow: var(--sh-lift); }
   .btn--ghost:hover { box-shadow: inset 0 0 0 1.5px var(--ink); }
   .btn--on-green:hover { background: var(--leaf-wash); }
+
+  /* Kinetic tension: the button lifts while the well inside it drifts the other
+     way and grows slightly. The two moving against each other is what makes the
+     control feel like it has parts, instead of being one flat sticker. */
+  .btn:hover .btn__icon {
+    background: rgba(0, 0, 0, .17);
+    transform: translate(3px, -1px) scale(1.06);
+  }
+  .btn--lg:hover .btn__icon,
+  .btn--block:hover .btn__icon,
+  .btn--lg:hover::after,
+  .btn--block:hover::after {
+    background: rgba(0, 0, 0, .17);
+    transform: translate(3px, calc(-50% - 1px)) scale(1.06);
+  }
 }
-.btn:active { transform: translateY(0); }
+
+/* Physical press. Scaling the whole control reads as depressing it; the older
+   translateY(0) merely cancelled the hover lift and felt like nothing. */
+.btn:active { transform: scale(.98); }
 
 /* ── 6. header ───────────────────────────────────────────────────────────── */
+/* The header is a floating island, not a bar welded to the top edge: the strip
+   itself is transparent and only the inner container is painted, so the page
+   scrolls visibly past both sides of it. */
 .site-header {
   position: sticky; top: 0; z-index: 50;
-  background: color-mix(in srgb, var(--cream) 88%, transparent);
-  backdrop-filter: saturate(150%) blur(10px);
-  transition: box-shadow .2s ease, border-color .2s ease;
-  border-bottom: 1px solid transparent;
+  padding-block: 1.1rem .3rem;
+  background: none;
 }
-.site-header.is-scrolled { border-bottom-color: var(--line); box-shadow: 0 2px 14px rgba(42, 35, 32, .06); }
 
 .site-header__inner {
   display: flex; align-items: center; gap: .75rem;
-  min-height: 64px; padding-block: .5rem;
+  min-height: 60px; padding-inline: 1.1rem; padding-block: .35rem;
+  background: color-mix(in srgb, var(--cream) 94%, transparent);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-btn);
+  box-shadow: var(--sh-float);
+  transition: box-shadow .6s var(--ease-spring), background-color .6s var(--ease-spring);
+}
+.site-header.is-scrolled .site-header__inner { box-shadow: var(--sh-lift); }
+
+/* Glass only from 900px up, and the reason is not taste. An element with
+   backdrop-filter becomes the containing block for its fixed-position
+   descendants, exactly like transform does. The mobile nav overlay below is
+   `position: fixed; inset: 0` and lives inside this element — blur the pill at
+   phone widths and the overlay silently sizes itself to the pill instead of the
+   viewport. Desktop has no overlay, so it can have the glass. It also means one
+   less blurred layer on the hardware least able to afford it. */
+@media (min-width: 900px) {
+  .site-header__inner {
+    background: color-mix(in srgb, var(--cream) 72%, transparent);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+  }
+  .site-header.is-scrolled .site-header__inner {
+    background: color-mix(in srgb, var(--cream) 86%, transparent);
+  }
 }
 
 .logo { display: inline-flex; align-items: center; gap: .55rem; text-decoration: none; color: var(--ink); }
@@ -240,9 +425,10 @@ h1, h2, h3, .price, .plan__name {
 .nav__list a:hover { color: var(--saffron-deep); }
 
 .nav-toggle {
-  display: none; align-items: center; gap: .45rem; margin-left: auto;
-  min-height: 44px; padding: .4rem .7rem; background: transparent;
-  border: 1.5px solid var(--steel); border-radius: var(--r-btn); cursor: pointer;
+  display: none; align-items: center; gap: .5rem; margin-left: auto;
+  min-height: 44px; padding: .4rem .85rem; background: transparent;
+  border: 1.5px solid var(--hairline); border-radius: var(--r-btn); cursor: pointer;
+  transition: border-color .45s var(--ease-spring);
 }
 .nav-toggle__label { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-sm); }
 .nav-toggle__bars, .nav-toggle__bars::before, .nav-toggle__bars::after {
@@ -253,35 +439,74 @@ h1, h2, h3, .price, .plan__name {
 .nav-toggle__bars::before { top: -5px; }
 .nav-toggle__bars::after { top: 5px; }
 
+/* Hamburger to X, driven entirely off the aria-expanded attribute main.js
+   already maintains — no extra class, no extra JavaScript. The outer two bars
+   travel to the centre line and cross; the middle one goes transparent rather
+   than scaling away, so nothing shifts the button's size mid-transition.
+   Transform and colour only, so this composites without a layout pass. */
+.nav-toggle__bars,
+.nav-toggle__bars::before,
+.nav-toggle__bars::after {
+  transition: transform .5s var(--ease-spring), background-color .25s var(--ease-out);
+}
+.nav-toggle[aria-expanded="true"] .nav-toggle__bars { background: transparent; }
+.nav-toggle[aria-expanded="true"] .nav-toggle__bars::before { transform: translateY(5px) rotate(45deg); }
+.nav-toggle[aria-expanded="true"] .nav-toggle__bars::after { transform: translateY(-5px) rotate(-45deg); }
+
 @media (max-width: 899px) {
-  .nav-toggle { display: inline-flex; }
+  /* The logo and the toggle sit above the overlay so the wordmark stays put and
+     the X is tappable; everything else is covered. Both are inside the header's
+     own stacking context, so these are local, not page-wide, z-indexes. */
+  .nav-toggle { display: inline-flex; position: relative; z-index: 2; }
+  .logo { position: relative; z-index: 2; }
+
   .nav {
-    position: absolute; left: 0; right: 0; top: 100%; margin: 0;
-    background: var(--surface); border-bottom: 1px solid var(--line);
-    box-shadow: var(--sh-2); display: none;
+    position: fixed; inset: 0; z-index: 1; margin: 0;
+    display: none;
+    background: color-mix(in srgb, var(--cream) 84%, transparent);
+    -webkit-backdrop-filter: blur(28px) saturate(170%);
+    backdrop-filter: blur(28px) saturate(170%);
   }
-  .nav.is-open { display: block; }
-  .nav__list { flex-direction: column; align-items: stretch; gap: 0; padding: .4rem var(--gutter) 1rem; }
-  .nav__list a { padding: .85rem .2rem; border-bottom: 1px solid var(--line); font-size: 1rem; }
+  /* min-height:100dvh, not 100vh — vh does not account for the iOS Safari URL
+     bar, which leaves a strip of page showing under the overlay as it collapses. */
+  .nav.is-open { display: grid; align-content: center; min-height: 100dvh; }
+
+  .nav__list { flex-direction: column; align-items: stretch; gap: 0; padding: 0 var(--gutter); }
+  .nav__list a {
+    padding: .75rem .2rem; border-bottom: 1px solid var(--hairline);
+    font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(1.5rem, 6.5vw, 2.25rem); letter-spacing: -0.03em;
+  }
+  .nav__list li:nth-child(1) { --i: 0 } .nav__list li:nth-child(2) { --i: 1 }
+  .nav__list li:nth-child(3) { --i: 2 } .nav__list li:nth-child(4) { --i: 3 }
+  .nav__list li:nth-child(5) { --i: 4 } .nav__list li:nth-child(6) { --i: 5 }
+  .nav__list li:nth-child(7) { --i: 6 }
+
   .site-header__cta { display: none; }
 }
 
 /* ── 7. hero ─────────────────────────────────────────────────────────────── */
-.hero { padding-block: clamp(1.4rem, 4vw, 3.5rem) clamp(2rem, 5vw, 4rem); }
-.hero__grid { display: grid; gap: clamp(1.5rem, 4vw, 3rem); }
-.hero__title { font-size: var(--fs-h1); margin-bottom: .7rem; }
+/* Full agency rhythm, hero included — a deliberate call, made knowing it pushes
+   the priced CTA and today's special below a 667px fold. It is survivable only
+   because .action-bar is fixed to the bottom of every phone viewport with both
+   WhatsApp and Call on it, so tap intent is never stranded. Shrink this and the
+   whole page stops reading as considered; if paid conversion measurably drops,
+   this clamp is the first number to revisit. */
+.hero { padding-block: clamp(6rem, 12vw, 10rem); }
+.hero__grid { display: grid; gap: clamp(2.5rem, 5vw, 4.5rem); }
+.hero__title { font-size: var(--fs-h1); margin-bottom: 1rem; }
 .hero__sub {
   font-size: clamp(1rem, 2.4vw, 1.1875rem); line-height: 1.5;
-  color: var(--ink-muted); max-width: 34ch; margin-bottom: 1.4rem;
+  color: var(--ink-muted); max-width: 34ch; margin-bottom: 1.9rem;
 }
-.hero__actions { display: grid; gap: .7rem; margin-bottom: 1.3rem; }
+.hero__actions { display: grid; gap: .8rem; margin-bottom: 1.7rem; }
 
 /* the delivery tag — signature element */
 .dabba-tag {
   display: inline-flex; align-items: center; gap: .5rem; flex-wrap: wrap;
-  padding: .35rem .85rem .35rem .5rem; margin-bottom: 1.1rem;
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r-btn); box-shadow: var(--sh-1);
+  padding: .35rem .95rem .35rem .4rem; margin-bottom: 1.3rem;
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: var(--r-btn); box-shadow: var(--sh-float);
 }
 .dabba-tag__label {
   font-family: var(--font-display); font-weight: 700; font-size: .6875rem;
@@ -291,12 +516,12 @@ h1, h2, h3, .price, .plan__name {
 }
 .dabba-tag__value { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-sm); }
 
-.chips { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: 1.4rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.7rem; }
 .chip {
-  display: inline-flex; align-items: center; gap: .35rem;
-  padding: .3rem .6rem; font-size: .75rem; font-weight: 500; line-height: 1.35;
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r-btn); color: var(--ink);
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .35rem .75rem; font-size: .75rem; font-weight: 500; line-height: 1.35;
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-radius: var(--r-btn); color: var(--ink); box-shadow: var(--sh-float);
 }
 .chip__icon {
   width: 13px; height: 13px; flex: none; fill: none;
@@ -304,19 +529,40 @@ h1, h2, h3, .price, .plan__name {
 }
 .chip__icon .fill { fill: var(--leaf); stroke: none; }
 
-.special {
-  padding: .9rem 1.1rem; background: var(--surface);
-  border-left: 4px solid var(--saffron); border-radius: 0 var(--r-sm) var(--r-sm) 0;
-  box-shadow: var(--sh-1);
-}
-.special__label {
-  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xs);
-  letter-spacing: .1em; text-transform: uppercase; color: var(--saffron-deep);
-}
+/* Keeps the saffron edge that marks it as today's line, but the fill, hairline
+   and inner plate come from the shared enclosure rule in §8.
+
+   This used to carry a 4px saffron border-left. That is the single most
+   recognisable tell of a generated interface, and it became redundant the
+   moment .special__label turned into a saffron pill — the block was then
+   signalling "today" twice with the same colour. The accent now lives in the
+   plate's fill instead: warmth across the whole card rather than a tab stuck to
+   its edge. All three resulting pairs are already asserted in audit.test.mjs —
+   ink on wash, deep saffron on wash, and saffron-ink on solid saffron. */
+.special { padding: calc(var(--bezel) + .85rem) calc(var(--bezel) + 1rem); }
+.special::before { background: var(--saffron-wash); }
+.special .special__label { background: var(--saffron); color: var(--saffron-ink); }
+/* Styled with .eyebrow above. Only the spacing differs — this one sits inside a
+   small card, so it gets less room beneath it than a section eyebrow does. */
+.special__label { margin-bottom: .5rem; }
 .special__value { font-family: var(--font-display); font-weight: 700; font-size: 1.0625rem; margin: .15rem 0 .35rem; }
 
-.hero__img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--r-card); background: var(--steel); }
-.hero__caption { font-size: var(--fs-xs); color: var(--ink-muted); text-align: center; margin-top: .6rem; }
+/* The one place on the page with a real wrapper element to spare, so the hero
+   photograph gets a literal double bezel instead of a simulated one: the media
+   div is the tray, the image itself is the plate, and the caption sits inside
+   the tray beneath it like a label on the rim. */
+.hero__media {
+  padding: var(--bezel) var(--bezel) .55rem;
+  background: var(--shell);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-shell);
+  box-shadow: var(--sh-float);
+}
+.hero__img {
+  width: 100%; aspect-ratio: 4 / 3; object-fit: cover;
+  border-radius: var(--r-core); background: var(--steel);
+}
+.hero__caption { font-size: var(--fs-xs); color: var(--ink-muted); text-align: center; margin-top: .7rem; }
 
 @media (min-width: 900px) {
   .hero__grid { grid-template-columns: 1.02fr .98fr; align-items: center; }
@@ -326,36 +572,35 @@ h1, h2, h3, .price, .plan__name {
 }
 
 /* ── 8. sections ─────────────────────────────────────────────────────────── */
-.section { padding-block: clamp(2.75rem, 7vw, 5rem); }
+.section { padding-block: var(--space-section); }
 .section--cream { background: var(--cream); }
 .section--white { background: var(--surface); }
-.section__head { max-width: 62ch; margin-bottom: clamp(1.5rem, 3.5vw, 2.5rem); }
+.section__head { max-width: 62ch; margin-bottom: clamp(2.5rem, 5vw, 4rem); }
 .section__title { font-size: var(--fs-h2); }
 .section__lede { color: var(--ink-muted); margin-top: .6rem; }
 
-.card {
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r-card); box-shadow: var(--sh-1);
-  padding: 1.25rem; transition: transform .2s ease, box-shadow .2s ease;
-}
 @media (hover: hover) {
-  .card--lift:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
+  .card--lift:hover { transform: translateY(-4px); }
+  .card--lift:hover::before { box-shadow: inset 0 1px 1px rgba(255, 255, 255, .9), var(--sh-lift); }
 }
 
-.grid { display: grid; gap: 1rem; }
+.grid { display: grid; gap: clamp(1rem, 2vw, 1.5rem); }
 .grid--features { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
 .grid--plans { grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); }
 .grid--packs { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .grid--3 { grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); }
 
 /* today's menu */
-.menu__tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.25rem; }
+.menu__tabs { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: 1.75rem; }
 .menu__tab {
-  min-height: 44px; padding: .5rem 1rem; background: var(--surface);
-  border: 1px solid var(--line); border-radius: var(--r-btn); cursor: pointer;
+  min-height: 44px; padding: .5rem 1.15rem; background: var(--surface);
+  border: 1px solid var(--hairline); border-radius: var(--r-btn); cursor: pointer;
   font-family: var(--font-display); font-weight: 700; font-size: var(--fs-sm);
-  transition: background-color .16s ease, border-color .16s ease;
+  box-shadow: var(--sh-float);
+  transition: background-color .45s var(--ease-spring), border-color .45s var(--ease-spring),
+              transform .45s var(--ease-spring);
 }
+.menu__tab:active { transform: scale(.97); }
 .menu__tab[aria-selected="true"] { background: var(--saffron); color: var(--saffron-ink); border-color: var(--saffron); }
 .menu__tab[data-closed="true"] { color: var(--ink-muted); }
 @media (hover: hover) { .menu__tab:hover { border-color: var(--saffron-deep); } }
@@ -364,12 +609,13 @@ h1, h2, h3, .price, .plan__name {
 /* All days are visible until JS confirms it can run — the week is readable and
    crawlable with JavaScript disabled. */
 .menu.is-enhanced .menu__panel[hidden] { display: none; }
-.menu__panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 1.25rem; }
+/* Enclosure comes from the shared rule in §8; only the day heading spacing is
+   local. Re-declaring background or radius here would flatten the bezel. */
 .menu__day { font-family: var(--font-display); font-weight: 800; font-size: 1.125rem; margin-bottom: .1rem; }
 .menu__date { font-size: var(--fs-xs); color: var(--ink-muted); margin-bottom: .85rem; }
 .menu__items { display: flex; flex-wrap: wrap; gap: .4rem; }
 .menu__item {
-  padding: .35rem .8rem; background: var(--cream); border: 1px solid var(--line);
+  padding: .4rem .9rem; background: var(--cream); border: 1px solid var(--hairline);
   border-radius: var(--r-btn); font-size: var(--fs-sm);
 }
 .menu__closed { color: var(--ink-muted); }
@@ -388,8 +634,25 @@ h1, h2, h3, .price, .plan__name {
 .feature__text { font-size: var(--fs-sm); color: var(--ink-muted); }
 
 /* plan cards */
+/* These two were inline style attributes. They had to move into the stylesheet
+   because their radius now has to stay concentric with the plate behind them —
+   a value that lives in --r-core and would otherwise be duplicated five times
+   in the markup, where nobody would think to update it. */
+.plan__img {
+  width: 100%; aspect-ratio: 4 / 3; object-fit: cover;
+  border-radius: calc(var(--r-core) - .35rem); margin-bottom: 1rem;
+}
+.kitchen__img {
+  width: 100%; aspect-ratio: 3 / 2; object-fit: cover;
+  border-radius: var(--r-shell);
+}
+
 .plan { display: flex; flex-direction: column; position: relative; }
-.plan--featured { border: 2px solid var(--saffron); box-shadow: var(--sh-2); }
+/* The saffron ring belongs on the tray, not the plate — a ring drawn inside the
+   bezel would read as a mistake in the machining rather than emphasis. The
+   deeper shadow goes on the plate so the featured plan sits proud of its row. */
+.plan--featured { border: 2px solid var(--saffron); }
+.plan--featured::before { box-shadow: inset 0 1px 1px rgba(255, 255, 255, .9), var(--sh-lift); }
 .plan__badge {
   position: absolute; top: -11px; left: 1.25rem;
   padding: .2rem .7rem; background: var(--saffron); color: var(--saffron-ink);
@@ -421,14 +684,29 @@ h1, h2, h3, .price, .plan__name {
    below AA. Darkening keeps light text at 6.4:1 or better, and reads as a
    recessed compartment, which suits the tiffin. The lead tier is emphasised
    with a saffron ring instead of a lighter fill. */
+/* Same nested enclosure as a card, built the other way up: on the green band the
+   plate DARKENS instead of lightening. Both layers composite, so the effective
+   darkening under the text is not .24 but 1 - (.90 x .76) = .316 — the tray
+   dims the band first, then the plate dims that. tests/audit.test.mjs asserts
+   the composite of both layers rather than either number on its own. */
 .tier {
-  padding: 1.1rem 1.25rem; border-radius: var(--r-card);
-  background: rgba(0, 0, 0, .16); border: 1px solid rgba(255, 255, 255, .20);
+  position: relative;
+  padding: calc(var(--bezel) + 1rem) calc(var(--bezel) + 1.15rem);
+  border-radius: var(--r-shell);
+  background: rgba(0, 0, 0, .10);
+  border: 1px solid rgba(255, 255, 255, .20);
 }
-.tier--lead {
-  background: rgba(0, 0, 0, .22);
-  border: 2px solid var(--saffron);
+.tier::before {
+  content: "";
+  position: absolute; inset: var(--bezel); z-index: 0;
+  border-radius: var(--r-core);
+  background: rgba(0, 0, 0, .24);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, .10);
 }
+.tier > * { position: relative; z-index: 1; }
+
+.tier--lead { border: 2px solid var(--saffron); }
+.tier--lead::before { background: rgba(0, 0, 0, .30); }
 .tier__name { font-family: var(--font-display); font-weight: 700; font-size: 1rem; }
 .tier__price { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.7rem, 4.5vw, 2.2rem); letter-spacing: -0.03em; }
 .tier__note { font-size: var(--fs-xs); color: var(--on-green-muted); }
@@ -441,7 +719,9 @@ h1, h2, h3, .price, .plan__name {
 @media (min-width: 720px) { .tiers { grid-template-columns: 1.25fr 1fr 1fr; align-items: stretch; } }
 
 /* food packs */
-.pack { display: flex; flex-direction: column; gap: .1rem; padding: 1rem; }
+/* Padding is expressed against --bezel so the plate keeps an even margin inside
+   the tray. A bare 1rem here would sit the text hard against the inner edge. */
+.pack { display: flex; flex-direction: column; gap: .1rem; padding: calc(var(--bezel) + 1.1rem); }
 .pack__name { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-h3); }
 .pack__qty { font-size: var(--fs-xs); color: var(--ink-muted); }
 .pack__price { font-family: var(--font-display); font-weight: 800; font-size: 1.4rem; margin-top: .35rem; letter-spacing: -0.02em; }
@@ -449,7 +729,7 @@ h1, h2, h3, .price, .plan__name {
 
 /* how it works */
 .steps { display: grid; gap: 1rem; counter-reset: step; }
-.step { position: relative; display: flex; gap: .9rem; align-items: flex-start; padding: 1.1rem 1.25rem; }
+.step { position: relative; display: flex; gap: .9rem; align-items: flex-start; padding: calc(var(--bezel) + 1.2rem); }
 .step__num {
   display: grid; place-items: center; flex: none; width: 34px; height: 34px;
   background: var(--leaf-wash); color: var(--leaf-deep); border-radius: 50%;
@@ -460,11 +740,7 @@ h1, h2, h3, .price, .plan__name {
 @media (min-width: 860px) { .steps { grid-template-columns: repeat(4, 1fr); } }
 
 /* delivery + contact */
-.info__label {
-  font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xs);
-  letter-spacing: .1em; text-transform: uppercase; color: var(--saffron-deep);
-  margin-bottom: .5rem;
-}
+/* Styled with .eyebrow above. */
 .info__big { font-family: var(--font-display); font-weight: 800; font-size: 1.6rem; letter-spacing: -0.02em; }
 .info address { font-style: normal; line-height: 1.75; }
 .info__row { display: flex; justify-content: space-between; gap: 1rem; padding: .4rem 0; border-bottom: 1px dashed var(--line); font-size: var(--fs-sm); }
@@ -486,9 +762,9 @@ h1, h2, h3, .price, .plan__name {
 /* map facade — the iframe is injected on click, so Google Maps costs nothing
    until someone actually wants it */
 .map {
-  display: grid; place-items: center; gap: .7rem; text-align: center;
-  min-height: 260px; padding: 1.5rem;
-  background: var(--cream); border: 1px dashed var(--steel); border-radius: var(--r-card);
+  display: grid; place-items: center; gap: .9rem; text-align: center;
+  min-height: 280px; padding: calc(var(--bezel) + 1.5rem);
+  background: var(--cream); border: 1px dashed var(--steel); border-radius: var(--r-shell);
 }
 .map__pin { width: 34px; height: 34px; fill: none; stroke: var(--saffron-deep); stroke-width: 1.6; }
 .map__actions { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; }
@@ -507,10 +783,13 @@ h1, h2, h3, .price, .plan__name {
 
 /* faq */
 .faq__list { display: grid; gap: .6rem; max-width: 72ch; }
-.faq__item { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); }
+/* The tray is only as deep as the bezel here — summary and answer bring their
+   own padding, so the shared calc() would double it. */
+.faq__item { padding: var(--bezel); border-radius: var(--r-card); }
+.faq__item::before { border-radius: calc(var(--r-card) - var(--bezel)); }
 .faq__item summary {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
-  min-height: var(--tap); padding: .85rem 1.1rem; cursor: pointer;
+  min-height: var(--tap); padding: .95rem 1.15rem; cursor: pointer;
   font-family: var(--font-display); font-weight: 700; font-size: 1rem;
   list-style: none;
 }
@@ -518,15 +797,15 @@ h1, h2, h3, .price, .plan__name {
 .faq__item summary::after {
   content: ""; flex: none; width: 9px; height: 9px;
   border-right: 2px solid var(--saffron-deep); border-bottom: 2px solid var(--saffron-deep);
-  transform: rotate(45deg) translateY(-2px); transition: transform .2s ease;
+  transform: rotate(45deg) translateY(-2px); transition: transform .5s var(--ease-spring);
 }
 .faq__item[open] summary::after { transform: rotate(-135deg) translateY(-2px); }
-.faq__answer { padding: 0 1.1rem 1.1rem; font-size: var(--fs-sm); color: var(--ink-muted); }
+.faq__answer { padding: 0 1.15rem 1.15rem; font-size: var(--fs-sm); color: var(--ink-muted); }
 
 /* CTA bands — treatment A (full band) and B (slim inline row) */
 .cta-band {
-  display: grid; gap: 1rem; padding: clamp(1.4rem, 4vw, 2rem);
-  background: var(--saffron-wash); border-radius: var(--r-card); text-align: center;
+  display: grid; gap: 1.15rem; padding: clamp(2.25rem, 6vw, 3.5rem);
+  background: var(--saffron-wash); border-radius: var(--r-shell); text-align: center;
   justify-items: center;
 }
 .cta-band__title { font-family: var(--font-display); font-weight: 800; font-size: clamp(1.15rem, 3vw, 1.5rem); letter-spacing: -0.02em; }
@@ -589,9 +868,10 @@ h1, h2, h3, .price, .plan__name {
        because a fixed column container has no height of its own to distribute. */
     flex: none;
     width: 56px; height: 56px; min-height: 0; border-radius: 50%;
-    box-shadow: var(--sh-2); transition: transform .18s ease;
+    box-shadow: var(--sh-lift); transition: transform .5s var(--ease-spring);
   }
-  .action-bar__btn:hover { transform: translateY(-2px); }
+  .action-bar__btn:hover { transform: translateY(-3px) scale(1.04); }
+  .action-bar__btn:active { transform: scale(.96); }
   .action-bar__text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .action-bar .btn__icon { width: 24px; height: 24px; }
 }
@@ -602,14 +882,103 @@ h1, h2, h3, .price, .plan__name {
    below the hero invisible with JavaScript disabled — the markup was there but
    unreadable. `.reveal-all` is a safety net the same inline script arms on a
    timer, so a paid visitor still sees content even if main.js fails to load. */
-.js .reveal { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .5s ease; }
+/* --i staggers cards within a group, so they land one after another instead of
+   as a single slab. main.js moves .reveal from a grid onto its children and
+   numbers them, capping the index so a fifteen-item grid does not take a second
+   and a half to finish arriving. Groups it leaves alone have no --i and fall
+   back to 0. */
+/* Heavier travel and a longer, decelerating curve, so sections arrive with some
+   mass instead of blinking on. Deliberately NO blur filter in the resting
+   state: this page is built for mid-range Android, and blurring thirty-odd
+   revealed groups is a GPU cost paid on every scroll for an effect nobody can
+   name afterwards. Transform and opacity only — both composite free. */
+.js .reveal {
+  opacity: 0; transform: translateY(3rem);
+  transition: opacity .8s var(--ease-spring), transform .8s var(--ease-spring);
+  transition-delay: calc(var(--i, 0) * 55ms);
+}
 .js .reveal.is-visible,
 .js.reveal-all .reveal { opacity: 1; transform: none; }
+
+/* Hero, on load. The <h1> is deliberately NOT in this list: it is the LCP
+   element, so it paints immediately and everything else catches up behind it.
+   Animating the headline would make the page measurably slower to the one
+   metric Google scores here. */
+.js .hero__sub,
+.js .hero__actions,
+.js .chips,
+.js .special { animation: hero-in .7s var(--ease-spring) backwards; }
+.js .hero__sub { animation-delay: .06s; }
+.js .hero__actions { animation-delay: .14s; }
+.js .chips { animation-delay: .22s; }
+.js .special { animation-delay: .3s; }
+
+@keyframes hero-in {
+  from { opacity: 0; transform: translateY(1.25rem); }
+}
+
+/* The mobile menu does not simply appear — the links rise out of the glass one
+   after another. Two things keep this safe: .is-open is only ever set by
+   main.js, and the .js prefix is what tests/sections.test.mjs demands of any
+   rule running a keyframe that starts invisible.
+   Deliberately NOT wrapped in a media query, even though only the phone layout
+   has an overlay. The guard test reads selectors with a regex that cannot see
+   past a `@media {`, so it reports the media query itself as the selector and
+   fails — erring towards a false alarm rather than a blank page, which is the
+   right way for that test to be wrong. Nothing is lost by leaving the rule
+   flat: --i is only defined at phone widths, so every desktop item resolves to
+   the same 60ms and the toggle that sets .is-open is display:none up there. */
+.js .nav.is-open .nav__list li {
+  animation: nav-in .55s var(--ease-spring) backwards;
+  animation-delay: calc(var(--i, 0) * 45ms + 60ms);
+}
+
+@keyframes nav-in {
+  from { opacity: 0; transform: translateY(2rem); }
+}
+
+/* ── the signature: laying out a thali ────────────────────────────────────
+   Picking a day sets the dishes down one at a time, the way katoris go onto a
+   thali. This is the one place on the page where motion is the point, so it is
+   the only place allowed a noticeable duration. */
+.js .menu__panel.is-laying .menu__item {
+  animation: dish-in .34s cubic-bezier(.22, .61, .36, 1) backwards;
+  animation-delay: calc(var(--i) * 45ms);
+}
+
+@keyframes dish-in {
+  from { opacity: 0; transform: translateY(6px) scale(.94); }
+}
+
+/* Sunday is shut, and should look shut rather than merely unselected. */
+.menu__tab[data-closed="true"] { color: var(--ink-muted); border-style: dashed; }
+.menu__tab[data-closed="true"][aria-selected="true"] {
+  background: var(--steel); color: var(--ink); border-color: var(--steel);
+}
+
+/* Which day it is today, kept visible even while another day is open. */
+.menu__tab[data-today="true"]::after {
+  content: ""; display: inline-block; width: 5px; height: 5px; margin-left: .4rem;
+  border-radius: 50%; background: currentColor; vertical-align: middle; opacity: .55;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
   html { scroll-behavior: auto; }
-  .reveal { opacity: 1; transform: none; }
+  /* Anything whose resting state is invisible has to be put back, or a visitor
+     who asked for less motion gets a blank page instead of a still one. */
+  /* `.js` prefix is load-bearing, not decoration. The rule this has to beat is
+     `.js .reveal`, and a media query adds no specificity — so a bare `.reveal`
+     here loses at (0,1,0) vs (0,2,0) and silently does nothing. It looked like
+     it worked only because .reveal-all and the observer both override it later.
+     Written this way, a reduced-motion visitor gets the whole page at rest
+     immediately, without depending on either of those still existing. */
+  .js .reveal { opacity: 1; transform: none; transition-delay: 0s !important; }
+  .js .menu__panel.is-laying .menu__item,
+  .js .nav.is-open .nav__list li,
+  .js .hero__sub, .js .hero__actions, .js .chips, .js .special {
+    animation: none !important; opacity: 1; transform: none;
+  }
 }
 
 /* ── 11. print ───────────────────────────────────────────────────────────── */

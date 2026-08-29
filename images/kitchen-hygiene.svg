@@ -1,11 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600" role="img" aria-label="Our kitchen placeholder">
-  <rect width="900" height="600" fill="#FFF8F0"/>
-  <rect x="1" y="1" width="898" height="598" fill="none" stroke="#E4E0D8" stroke-width="2" stroke-dasharray="10 8"/>
-  <circle cx="450" cy="270" r="102.00000000000001" fill="none" stroke="#F57C00" stroke-width="5.610000000000001"/>
-  <circle cx="450" cy="270" r="63.24000000000001" fill="none" stroke="#E4E0D8" stroke-width="4.590000000000001"/>
-  <text x="450" y="441" text-anchor="middle" fill="#6B5D54"
-    font-family="system-ui, sans-serif" font-size="35"
-    font-weight="600" letter-spacing="1.5">Our kitchen</text>
-  <text x="450" y="477" text-anchor="middle" fill="#E4E0D8"
-    font-family="system-ui, sans-serif" font-size="25">replace with a real photo · 900×600</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="900" height="600" role="img" aria-label="A clean home kitchen: pot on the flame and stacked steel tiffins">
+<rect width="900" height="600" fill="#FFF8F0"/>
+
+  <rect x="0" y="0" width="900" height="396" fill="#FFEEDC" opacity=".4"/>
+
+  <rect x="567" y="48" width="261" height="204.00000000000003" rx="12" fill="#FFFFFF" stroke="#C9C3B8" stroke-width="5"/>
+  <line x1="697.5" y1="48" x2="697.5" y2="252" stroke="#C9C3B8" stroke-width="4"/>
+  <line x1="567" y1="150" x2="828" y2="150" stroke="#C9C3B8" stroke-width="4"/>
+
+  <path d="M212.40000000000003 282 c -14 -22 14 -30 0 -66"
+        fill="none" stroke="#C9C3B8" stroke-width="5" stroke-linecap="round" opacity=".55"/><path d="M252.00000000000003 282 c -14 -22 14 -30 0 -78"
+        fill="none" stroke="#C9C3B8" stroke-width="5" stroke-linecap="round" opacity=".55"/><path d="M291.6 282 c -14 -22 14 -30 0 -66"
+        fill="none" stroke="#C9C3B8" stroke-width="5" stroke-linecap="round" opacity=".55"/>
+
+  <rect x="0" y="396" width="900" height="204" fill="#FFFFFF"/>
+  <line x1="0" y1="396" x2="900" y2="396" stroke="#C9C3B8" stroke-width="6"/>
+
+  <path d="M162.00000000000003 285 h 180 l -16.2 96
+           a 72 30 0 0 1 -147.6 0 z" fill="#E4E0D8" stroke="#C9C3B8" stroke-width="4"/>
+  <rect x="144.00000000000003" y="276" width="216" height="16.8" rx="8" fill="#C9C3B8"/>
+  <path d="M223.20000000000002 384 c -12 -16 6 -22 1 -34 c 15 13 19 24 8 36 z" fill="#F57C00" opacity=".85"/>
+  <path d="M280.8 384 c -12 -16 6 -22 1 -34 c 15 13 19 24 8 36 z" fill="#F57C00" opacity=".85"/>
+
+  <rect x="477" y="374" width="117" height="22" rx="7" fill="#FFFFFF" stroke="#C9C3B8" stroke-width="3.5"/>
+  <rect x="469.8" y="367" width="131.4" height="9" rx="4.5" fill="#E4E0D8" stroke="#C9C3B8" stroke-width="3"/><rect x="477" y="344" width="117" height="22" rx="7" fill="#FFFFFF" stroke="#C9C3B8" stroke-width="3.5"/>
+  <rect x="469.8" y="337" width="131.4" height="9" rx="4.5" fill="#E4E0D8" stroke="#C9C3B8" stroke-width="3"/><rect x="477" y="314" width="117" height="22" rx="7" fill="#FFFFFF" stroke="#C9C3B8" stroke-width="3.5"/>
+  <rect x="469.8" y="307" width="131.4" height="9" rx="4.5" fill="#E4E0D8" stroke="#C9C3B8" stroke-width="3"/>
+
+  <rect x="675" y="380" width="171" height="14" rx="7" fill="#E9CBA0" stroke="#D2A971" stroke-width="3"/>
+  <circle cx="711" cy="362" r="15" fill="#57A05A"/>
+  <circle cx="765" cy="366" r="11" fill="#2E7D32" opacity=".8"/>
+  <circle cx="810" cy="361" r="9" fill="#E9A33C"/>
 </svg>

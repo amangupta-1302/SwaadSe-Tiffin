@@ -9,10 +9,17 @@
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 
-<!-- There is deliberately NO password anywhere in this page. Access is
-     controlled by the web server (see admin/.htaccess), which checks
-     credentials BEFORE this file is ever sent. A login written in JavaScript
-     would put the password in plain view of anyone pressing Ctrl+U. -->
+<!-- There is deliberately NO secret anywhere in this page. The owner logs in
+     with an email and password that Supabase checks — never this page, so
+     there is nothing here for Ctrl+U to reveal. The session token that comes
+     back lives in a JavaScript variable only — never in browser storage or a
+     cookie — so closing the tab ends the session. Even the Supabase address
+     and its public key are fetched from /api/save at load time; this file
+     holds no configuration at all.
+
+     Everything that can change the website is checked server-side in
+     netlify/functions/save.mjs. Reaching this page proves nothing and grants
+     nothing. -->
 
 <style>
   body { padding-bottom: 3rem; }
@@ -27,11 +34,15 @@
 
   label { display: block; font-family: var(--font-display); font-weight: 700; font-size: var(--fs-xs);
           letter-spacing: .08em; text-transform: uppercase; color: var(--saffron-deep); margin-bottom: .35rem; }
-  input[type=text], input[type=number], textarea {
+  input[type=text], input[type=number], input[type=email], input[type=password], textarea {
     width: 100%; min-height: 44px; padding: .6rem .8rem; font: inherit; font-size: 1rem;
     color: var(--ink); background: var(--cream);
     border: 1.5px solid var(--line); border-radius: var(--r-sm);
   }
+
+  /* `display` on a class beats the hidden attribute, so .issue[hidden] was still
+     laying out an empty box. Anything hidden must actually be gone. */
+  [hidden] { display: none !important; }
   textarea { min-height: 68px; resize: vertical; }
   input:focus-visible, textarea:focus-visible { border-color: var(--saffron); }
   input[type=number] { max-width: 7rem; }
@@ -55,6 +66,19 @@
   .check input { width: 20px; height: 20px; min-height: 0; }
   .check label { margin: 0; text-transform: none; letter-spacing: 0; font-size: var(--fs-sm); color: var(--ink); }
 
+  /* Prices: one full-width box per row on a phone so the labels stay readable,
+     filling out to four across on a laptop. auto-fit does this without a
+     breakpoint, so it also behaves on the widths nobody thought to test. */
+  .price-group { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-sm);
+                 color: var(--ink-muted); margin: 1.1rem 0 .5rem; }
+  .price-group:first-child { margin-top: 0; }
+  #prices .row, #contact .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: .75rem; }
+  .price-field label { text-transform: none; letter-spacing: 0; font-size: var(--fs-sm);
+                       color: var(--ink); font-weight: 700; }
+  .rupee { display: flex; align-items: center; gap: .35rem; }
+  .rupee__sign { font-family: var(--font-display); font-weight: 800; color: var(--ink-muted); }
+  .rupee input[type=number] { max-width: none; width: 100%; }
+
   .issues { display: grid; gap: .4rem; margin-bottom: 1rem; }
   .issue { display: flex; gap: .5rem; padding: .6rem .8rem; border-radius: var(--r-sm); font-size: var(--fs-sm); }
   .issue--error { background: #FDECEA; color: #7A1C12; border: 1px solid #F3C4BE; }
@@ -72,6 +96,17 @@
     width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%;
     background: var(--leaf-wash); color: var(--leaf-deep); font-weight: 700; font-size: .75rem; }
   .actions { display: flex; flex-wrap: wrap; gap: .6rem; }
+  /* Sticky save bar: on a phone the Save panel is a long scroll away, so a
+     slim bar keeps "you have unsaved changes" within thumb reach. Hidden on
+     wide screens, where the whole page is visible anyway. */
+  .savebar { position: fixed; inset-inline: 0; bottom: 0; z-index: 80;
+             display: flex; gap: .75rem; align-items: center; justify-content: space-between;
+             background: var(--ink); color: #EDE6E0; padding: .6rem 1rem;
+             padding-bottom: calc(.6rem + env(safe-area-inset-bottom)); }
+  .savebar__note { font-size: var(--fs-sm); }
+  @media (min-width: 720px) { .savebar { display: none !important; } }
+  @media (max-width: 719.98px) { body { padding-bottom: 6.5rem; } }
+
   .toast { position: fixed; left: 50%; bottom: 1.5rem; transform: translateX(-50%);
            background: var(--ink); color: #fff; padding: .7rem 1.2rem; border-radius: var(--r-btn);
            font-size: var(--fs-sm); box-shadow: var(--sh-2); opacity: 0; pointer-events: none;
@@ -127,6 +162,31 @@
       <div id="days"></div>
     </section>
 
+    <!-- ── prices ──────────────────────────────────────────────────────── -->
+    <section class="panel">
+      <h2 class="panel__title">Prices</h2>
+      <p class="panel__hint">Whole rupees, numbers only. Each price changes in two places on the website at once —
+        the amount customers see, and the amount written into the WhatsApp message they send you.</p>
+      <div id="prices"></div>
+      <p class="issue issue--warn" style="margin-top:1rem">
+        Three places quote prices to Google rather than to visitors, and they are not updated from here:
+        the search-result description, the sharing preview, and the price range in the business listing.
+        After changing a price, ask your developer to update those — or see EDITING-GUIDE section 4.
+      </p>
+    </section>
+
+    <!-- ── phone numbers and address ───────────────────────────────────── -->
+    <section class="panel">
+      <h2 class="panel__title">Phone numbers and address</h2>
+      <p class="panel__hint">Changing a number here changes every Call and WhatsApp button on the website at once.
+        Write phone numbers as 10 digits — no spaces, no +91.</p>
+      <div id="contact"></div>
+      <p class="issue issue--warn" style="margin-top:1rem">
+        Your address and main number are also written into the data Google reads for your business listing,
+        and into the map link. Those are not updated from here — see EDITING-GUIDE section 5 after you change them.
+      </p>
+    </section>
+
     <!-- ── delivery windows ────────────────────────────────────────────── -->
     <section class="panel">
       <h2 class="panel__title">Delivery windows</h2>
@@ -136,26 +196,87 @@
       <div id="windows"></div>
     </section>
 
-    <!-- ── save ────────────────────────────────────────────────────────── -->
-    <section class="panel">
+    <!-- ── save ──────────────────────────────────────────────────────────
+         Two routes, and the page picks one by asking the server whether
+         /api/save exists. On Netlify it does, and the client just presses Save.
+         Anywhere else the old copy-and-paste route is shown instead, so this
+         page keeps working on plain static hosting and offline. -->
+    <section class="panel" id="save-panel">
       <h2 class="panel__title">Save your changes</h2>
-      <p class="panel__hint">Nothing is live yet. Put the text below into <code>js/content.js</code> on your website.</p>
-      <ol class="steps-help">
-        <li><span>Press <strong>Copy</strong> below.</span></li>
-        <li><span>Open your hosting <strong>File Manager</strong> → <code>js</code> → <code>content.js</code> → <strong>Edit</strong>.</span></li>
-        <li><span>Select everything already in there, paste over it, and <strong>Save</strong>.</span></li>
-        <li><span>Refresh the website. Done.</span></li>
-      </ol>
-      <div class="actions" style="margin-bottom:1rem">
-        <button type="button" class="btn btn--wa" id="copy">Copy the file</button>
-        <button type="button" class="btn btn--ghost btn--compact" id="download">Download instead</button>
+
+      <!-- filled in once the server has answered -->
+      <p id="save-mode" class="panel__hint">Checking how this website saves…</p>
+
+      <!-- route 1: log in, then a real Save button -->
+      <div id="save-online" hidden>
+
+        <!-- shown until the owner logs in -->
+        <form id="login">
+          <label for="email">Email</label>
+          <input type="email" id="email" autocomplete="username" inputmode="email">
+          <label for="pw" style="margin-top:.75rem">Password</label>
+          <input type="password" id="pw" autocomplete="current-password">
+          <p id="login-error" class="issue issue--error" role="alert" hidden style="margin-top:.75rem"></p>
+          <div class="actions" style="margin-top:.9rem">
+            <button type="submit" class="btn btn--wa" id="login-btn">Log in</button>
+            <button type="button" class="btn btn--ghost btn--compact" id="forgot">Forgot password?</button>
+          </div>
+        </form>
+
+        <!-- shown instead when the owner arrives from a password-reset email -->
+        <form id="recovery" hidden>
+          <label for="new-pw">Choose a new password</label>
+          <input type="password" id="new-pw" autocomplete="new-password">
+          <p id="recovery-error" class="issue issue--error" role="alert" hidden style="margin-top:.75rem"></p>
+          <div class="actions" style="margin-top:.9rem">
+            <button type="submit" class="btn btn--wa" id="recovery-btn">Set password and log in</button>
+          </div>
+        </form>
+
+        <!-- shown once logged in -->
+        <div id="logged-in" hidden>
+          <p class="panel__hint" id="who" style="margin-bottom:.6rem"></p>
+          <div class="actions">
+            <button type="button" class="btn btn--wa btn--lg" id="save">Save to the website</button>
+            <button type="button" class="btn btn--ghost btn--compact" id="logout">Log out</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- route 2: no server to save through -->
+      <div id="save-offline" hidden>
+        <ol class="steps-help">
+          <li><span>Press <strong>Copy</strong> below.</span></li>
+          <li><span>Open your hosting <strong>File Manager</strong> → <code>js</code> → <code>content.js</code> → <strong>Edit</strong>.</span></li>
+          <li><span>Select everything already in there, paste over it, and <strong>Save</strong>.</span></li>
+          <li><span>Refresh the website. Done.</span></li>
+        </ol>
+        <div class="actions">
+          <button type="button" class="btn btn--wa" id="copy">Copy the file</button>
+          <button type="button" class="btn btn--ghost btn--compact" id="download">Download instead</button>
+        </div>
+      </div>
+
+      <p id="save-status" class="issue" style="margin-top:1rem" hidden></p>
+
+      <div class="actions" style="margin-top:1rem">
         <button type="button" class="btn btn--ghost btn--compact" id="revert">Undo all my changes</button>
       </div>
-      <pre class="output" id="output" tabindex="0" aria-label="Generated content.js"></pre>
+
+      <details style="margin-top:1rem">
+        <summary class="panel__hint" style="cursor:pointer;margin:0">Show the file that gets saved</summary>
+        <pre class="output" id="output" tabindex="0" aria-label="Generated content.js" style="margin-top:.6rem"></pre>
+      </details>
     </section>
 
   </div>
 </main>
+
+<!-- Appears only while there are edits the website does not have yet. -->
+<div class="savebar" id="savebar" hidden>
+  <span class="savebar__note" id="savebar-note">Unsaved changes</span>
+  <button type="button" class="btn btn--wa btn--compact" id="savebar-btn">Save</button>
+</div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -187,9 +308,19 @@
       { label: '7:00 – 9:00 AM', startHour: 7, endHour: 9 },
       { label: '4:00 – 5:00 PM', startHour: 16, endHour: 17 },
     ],
+    prices: {},
+    contact: { whatsapp: '', phones: ['', '', ''], addressLine1: '', addressLine2: '', city: '', statePin: '' },
   };
 
-  const loaded = window.SITE ? clone(window.SITE) : clone(FALLBACK);
+  // Reassigned after a successful save, so "Undo all my changes" goes back to
+  // what is actually on the website rather than to what it was on page load.
+  let loaded = window.SITE ? clone(window.SITE) : clone(FALLBACK);
+  // A content.js written before prices moved out of index.html has no prices
+  // block. Give it an empty one so the boxes render blank and the validator
+  // says so, rather than the whole editor failing to start.
+  if (!loaded.prices || typeof loaded.prices !== 'object') loaded.prices = {};
+  if (!loaded.contact || typeof loaded.contact !== 'object') loaded.contact = clone(FALLBACK.contact);
+  if (!Array.isArray(loaded.contact.phones)) loaded.contact.phones = ['', '', ''];
   let state = clone(loaded);
 
   const todayIndex = schedule ? schedule.menuIndexFor(new Date()) : 0;
@@ -287,6 +418,117 @@
     });
   }
 
+  /** Built from SwaadSeAdmin.PRICE_FIELDS, so adding a price is a one-file edit. */
+  function renderPrices() {
+    const host = $('prices');
+    host.replaceChildren();
+
+    let group = null;
+    let row = null;
+    for (const field of PRICE_FIELDS) {
+      if (field.group !== group) {
+        group = field.group;
+        const heading = document.createElement('p');
+        heading.className = 'price-group';
+        heading.textContent = group;
+        host.append(heading);
+        row = document.createElement('div');
+        row.className = 'row';
+        host.append(row);
+      }
+
+      const wrap = document.createElement('div');
+      wrap.className = 'price-field';
+
+      const label = document.createElement('label');
+      label.htmlFor = `price-${field.key}`;
+      label.textContent = field.label;
+
+      const box = document.createElement('div');
+      box.className = 'rupee';
+      const sign = document.createElement('span');
+      sign.className = 'rupee__sign';
+      sign.setAttribute('aria-hidden', 'true');
+      sign.textContent = '₹';
+
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.id = `price-${field.key}`;
+      input.min = '1';
+      input.step = '1';
+      input.inputMode = 'numeric';
+      input.value = Number.isFinite(state.prices[field.key]) ? state.prices[field.key] : '';
+      input.addEventListener('input', () => {
+        // '' parses to NaN, which validate() reports rather than silently writing 0.
+        state.prices[field.key] = parseInt(input.value, 10);
+        refresh();
+      });
+      // Rupees are whole numbers, so "170.5" is saved as 170. Snap the box to
+      // the saved value once the owner leaves it, rather than letting it show a
+      // price that is not the one going onto the website.
+      input.addEventListener('change', () => {
+        if (Number.isInteger(state.prices[field.key])) input.value = state.prices[field.key];
+      });
+
+      box.append(sign, input);
+      wrap.append(label, box);
+      row.append(wrap);
+    }
+  }
+
+  /** Phone numbers and address, built from the same lists generate.js validates. */
+  function renderContact() {
+    const host = $('contact');
+    host.replaceChildren();
+
+    const field = (labelText, value, mode, onInput) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'price-field';
+      const label = document.createElement('label');
+      label.textContent = labelText;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.inputMode = mode;
+      input.autocomplete = 'off';
+      input.value = value;
+      input.addEventListener('input', () => { onInput(input.value); refresh(); });
+      label.htmlFor = input.id = `contact-${labelText.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+      wrap.append(label, input);
+      return wrap;
+    };
+
+    const heading = text => {
+      const el = document.createElement('p');
+      el.className = 'price-group';
+      el.textContent = text;
+      host.append(el);
+    };
+
+    heading('WhatsApp');
+    const waRow = document.createElement('div');
+    waRow.className = 'row';
+    waRow.append(field('WhatsApp number (with 91 in front)', state.contact.whatsapp,
+      'numeric', v => { state.contact.whatsapp = v; }));
+    host.append(waRow);
+
+    heading('Phone numbers for calls');
+    const phoneRow = document.createElement('div');
+    phoneRow.className = 'row';
+    for (let i = 0; i < PHONE_COUNT; i++) {
+      phoneRow.append(field(i === 0 ? 'Main number' : `Number ${i + 1}`, state.contact.phones[i] || '',
+        'numeric', v => { state.contact.phones[i] = v; }));
+    }
+    host.append(phoneRow);
+
+    heading('Kitchen address');
+    const addressRow = document.createElement('div');
+    addressRow.className = 'row';
+    for (const { key, label } of ADDRESS_FIELDS) {
+      addressRow.append(field(label, state.contact[key] || '', 'text', v => { state.contact[key] = v; }));
+    }
+    host.append(addressRow);
+  }
+
   function renderWindows() {
     const host = $('windows');
     host.replaceChildren();
@@ -317,20 +559,45 @@
       row.append(mk(`Window ${i + 1} — what customers read`, 'label', 'text'));
       row.append(mk('Starts (24h)', 'startHour', 'number'));
       row.append(mk('Ends (24h)', 'endHour', 'number'));
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'icon-btn';
+      remove.textContent = '×';
+      remove.setAttribute('aria-label', `Remove delivery window ${i + 1}`);
+      remove.addEventListener('click', () => {
+        state.deliveryWindows.splice(i, 1); renderWindows(); refresh();
+      });
+      row.append(remove);
       host.append(row);
     });
+
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.id = 'add-window';
+    add.className = 'btn btn--ghost btn--compact';
+    add.textContent = '+ Add a delivery window';
+    add.addEventListener('click', () => {
+      state.deliveryWindows.push({ label: '', startHour: 7, endHour: 9 });
+      renderWindows(); refresh();
+    });
+    host.append(add);
   }
 
   /* ── validation and file generation ─────────────────────────────────
      Both live in admin/generate.js so Node can import and test them. A
      second copy here would drift from the tested one. */
-  const { validate: validateState, generate: generateFile } = window.SwaadSeAdmin;
+  const { validate: validateState, generate: generateFile,
+          PRICE_FIELDS, ADDRESS_FIELDS, PHONE_COUNT } = window.SwaadSeAdmin;
   const validate = () => validateState(state);
   const generate = () => generateFile(state);
 
   /* ── refresh everything ────────────────────────────────────────────── */
 
   function refresh() {
+    // A previous save message describes a state the owner has now edited away.
+    $('save-status').hidden = true;
+
     // preview
     $('pv-special').textContent = state.todaysSpecial.trim() || '—';
     if (schedule) {
@@ -342,8 +609,10 @@
     const issues = validate();
     const host = $('issues');
     host.replaceChildren();
+    // Mode-neutral: the Save panel says what to do next, and it differs between
+    // a website with a Save button and one without.
     const shown = issues.length ? issues
-      : [['ok', 'Everything looks good. Copy the file below and paste it into js/content.js.']];
+      : [['ok', 'Everything looks good. Scroll down to save.']];
     for (const [kind, message] of shown) {
       const el = document.createElement('p');
       el.className = `issue issue--${kind}`;
@@ -354,10 +623,21 @@
     const blocked = issues.some(([kind]) => kind === 'error');
     $('copy').disabled = blocked;
     $('download').disabled = blocked;
-    $('copy').style.opacity = blocked ? '.5' : '';
-    $('download').style.opacity = blocked ? '.5' : '';
+    $('save').disabled = blocked;
+    for (const id of ['copy', 'download', 'save']) $(id).style.opacity = blocked ? '.5' : '';
 
     $('output').textContent = generate();
+
+    // The phone-width save bar: visible only while the page holds edits the
+    // website does not have. Counts problems rather than repeating them — the
+    // full messages are at the top of the page.
+    const errors = issues.filter(([kind]) => kind === 'error').length;
+    $('savebar').hidden = JSON.stringify(state) === JSON.stringify(loaded);
+    $('savebar-note').textContent = errors
+      ? `Unsaved changes · fix ${errors} problem${errors === 1 ? '' : 's'} first`
+      : 'Unsaved changes — not on the website yet';
+    $('savebar-btn').disabled = errors > 0;
+    $('savebar-btn').style.opacity = errors ? '.5' : '';
   }
 
   /* ── toast ─────────────────────────────────────────────────────────── */
@@ -370,7 +650,254 @@
     toastTimer = setTimeout(() => el.classList.remove('is-shown'), 2600);
   }
 
+  /* ── logging in ─────────────────────────────────────────────────────────
+     Supabase checks the email and password; this page never compares anything
+     itself, so there is no secret in it to find. The session token lives in
+     this one variable and nowhere else — never in browser storage or a cookie
+     — which means closing the tab logs the owner out. The Supabase address and
+     public key arrive from /api/save, so this file holds no configuration. */
+
+  let session = null;   // { token, email } — memory only
+  let supabase = null;  // { url, anonKey } — handed over by /api/save
+
+  // A password-reset email lands on /admin/#access_token=…&type=recovery.
+  // Read it before anything can disturb the URL.
+  const recoveryToken = (() => {
+    const params = new URLSearchParams(location.hash.slice(1));
+    return params.get('type') === 'recovery' ? params.get('access_token') : null;
+  })();
+
+  const sbHeaders = () => ({ apikey: supabase.anonKey, 'content-type': 'application/json' });
+
+  function formError(id, message) {
+    const el = $(id);
+    el.hidden = !message;
+    if (message) el.textContent = '✕  ' + message;
+  }
+
+  function showLogin(message) {
+    session = null;
+    $('login').hidden = false;
+    $('logged-in').hidden = true;
+    formError('login-error', message || '');
+  }
+
+  function showLoggedIn() {
+    $('login').hidden = true;
+    $('recovery').hidden = true;
+    $('logged-in').hidden = false;
+    $('who').textContent = `Logged in as ${session.email}. Press Save when you are done editing.`;
+    $('save-mode').textContent =
+      'Press Save and the website updates by itself about a minute later.';
+  }
+
+  async function login(event) {
+    event.preventDefault();
+    const email = $('email').value.trim();
+    const password = $('pw').value;
+    if (!email || !password) {
+      formError('login-error', 'Type your email and password first.');
+      return;
+    }
+
+    const button = $('login-btn');
+    button.disabled = true;
+    button.textContent = 'Logging in…';
+    try {
+      const response = await fetch(`${supabase.url}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: sbHeaders(),
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.access_token) {
+        formError('login-error', response.status === 400
+          ? 'That email or password is not right.'
+          : `Could not log in (${response.status}). Try again in a minute.`);
+        return;
+      }
+      session = { token: data.access_token, email: (data.user && data.user.email) || email };
+      $('pw').value = '';
+      showLoggedIn();
+      toast('Logged in.');
+    } catch {
+      formError('login-error', 'Could not reach the login service. Check your internet connection.');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Log in';
+    }
+  }
+
+  async function forgotPassword() {
+    const email = $('email').value.trim();
+    if (!email) {
+      formError('login-error', 'Type your email first, then press “Forgot password?” again.');
+      return;
+    }
+    try {
+      await fetch(`${supabase.url}/auth/v1/recover`, {
+        method: 'POST', headers: sbHeaders(), body: JSON.stringify({ email }),
+      });
+    } catch { /* deliberately the same message either way, below */ }
+    // One answer whether or not the account exists, so this button cannot be
+    // used to confirm the owner's email address.
+    formError('login-error', '');
+    toast('If that email has an account, a reset link is on its way.');
+  }
+
+  async function finishRecovery(event) {
+    event.preventDefault();
+    const password = $('new-pw').value;
+    if (password.length < 8) {
+      formError('recovery-error', 'Use at least 8 characters.');
+      return;
+    }
+
+    const button = $('recovery-btn');
+    button.disabled = true;
+    button.textContent = 'Saving password…';
+    try {
+      const response = await fetch(`${supabase.url}/auth/v1/user`, {
+        method: 'PUT',
+        headers: { ...sbHeaders(), authorization: `Bearer ${recoveryToken}` },
+        body: JSON.stringify({ password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        formError('recovery-error',
+          'That reset link has expired. Go back to the login form and press “Forgot password?” for a fresh one.');
+        $('login').hidden = false;
+        return;
+      }
+      // The link's token is a real session, so the owner is already logged in.
+      session = { token: recoveryToken, email: data.email || '' };
+      history.replaceState(null, '', location.pathname); // drop the token from the address bar
+      showLoggedIn();
+      toast('Password changed.');
+    } catch {
+      formError('recovery-error', 'Could not reach the login service. Check your internet connection.');
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Set password and log in';
+    }
+  }
+
+  /* ── saving ─────────────────────────────────────────────────────────────
+     The page does not decide how it can save — it asks. /api/save answers on
+     Netlify and nowhere else, so a copy of this folder opened from a laptop, or
+     hosted somewhere without the function, degrades to copy-and-paste instead
+     of showing a login that could only fail. */
+
+  function status(kind, message) {
+    const el = $('save-status');
+    el.hidden = false;
+    el.className = `issue issue--${kind}`;
+    el.textContent = (kind === 'error' ? '✕  ' : kind === 'ok' ? '✓  ' : '') + message;
+  }
+
+  function useOfflineSaving(reason) {
+    $('save-offline').hidden = false;
+    $('save-online').hidden = true;
+    $('save-mode').textContent = reason
+      || 'This website has no Save button, so copy the file and paste it in yourself:';
+  }
+
+  async function pickSavingMode() {
+    let info;
+    try {
+      const response = await fetch('/api/save', { cache: 'no-store' });
+      if (!response.ok) throw new Error(String(response.status));
+      info = await response.json();
+    } catch {
+      useOfflineSaving();
+      return;
+    }
+    if (!info || !info.ready || !info.supabase) {
+      // The function is deployed but its settings are incomplete. That is a
+      // developer's job, not the client's, so name what is missing.
+      useOfflineSaving('Saving is not switched on for this website yet' +
+        (info && info.missing && info.missing.length ? ` — still to set: ${info.missing.join(', ')}` : '') +
+        '. Until then, copy the file and paste it in:');
+      return;
+    }
+    supabase = info.supabase;
+    $('save-online').hidden = false;
+    $('save-offline').hidden = true;
+    if (recoveryToken) {
+      $('login').hidden = true;
+      $('recovery').hidden = false;
+      $('save-mode').textContent = 'Choose a new password to finish resetting it.';
+      $('new-pw').focus();
+    } else {
+      $('save-mode').textContent =
+        'Log in with your email and password. Forgotten it? Type your email and press “Forgot password?”.';
+    }
+  }
+
+  async function saveToWebsite() {
+    if (validate().some(([kind]) => kind === 'error')) {
+      status('error', 'Fix the red messages at the top of the page first.');
+      return;
+    }
+    if (!session) {
+      status('error', 'Log in first.');
+      return;
+    }
+
+    const button = $('save');
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Saving…';
+    status('warn', 'Saving…');
+
+    try {
+      const response = await fetch('/api/save', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${session.token}`,
+        },
+        body: JSON.stringify({ state }),
+      });
+      const info = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        loaded = clone(state);
+        $('savebar').hidden = true;
+        status(info.warning ? 'warn' : 'ok',
+          [info.message || 'Saved. The website will update in about a minute.', info.warning]
+            .filter(Boolean).join(' '));
+        toast('Saved.');
+      } else if (response.status === 401) {
+        // The session ran out mid-edit. Nothing is lost — the edits live in
+        // `state`, which survives logging in again.
+        showLogin('Your login expired. Log in and press Save again — your changes are still here.');
+        status('error', 'Your login expired. Log in above and press Save again.');
+      } else {
+        status('error', [info.error, ...(info.issues || [])].filter(Boolean).join(' · ')
+          || `The website refused the change (${response.status}).`);
+      }
+    } catch {
+      status('error', 'Could not reach the website. Check your internet connection and press Save again.');
+    } finally {
+      button.disabled = false;
+      button.textContent = label;
+    }
+  }
+
   /* ── wiring ────────────────────────────────────────────────────────── */
+
+  $('save').addEventListener('click', saveToWebsite);
+  $('login').addEventListener('submit', login);
+  $('recovery').addEventListener('submit', finishRecovery);
+  $('forgot').addEventListener('click', forgotPassword);
+  $('logout').addEventListener('click', () => { showLogin(); toast('Logged out.'); });
+  $('savebar-btn').addEventListener('click', () => {
+    // Saves directly when it can; otherwise brings the Save panel (login or
+    // copy-and-paste instructions) into view.
+    if (session && !$('save').disabled) saveToWebsite();
+    else $('save-panel').scrollIntoView({ behavior: 'smooth' });
+  });
 
   $('special').value = state.todaysSpecial;
   $('special').addEventListener('input', e => { state.todaysSpecial = e.target.value; refresh(); });
@@ -417,7 +944,7 @@
     if (!confirm('Throw away every change you have made since opening this page?')) return;
     state = clone(loaded);
     $('special').value = state.todaysSpecial;
-    renderDays(); renderWindows(); refresh();
+    renderDays(); renderPrices(); renderContact(); renderWindows(); refresh();
     toast('Reverted to the file as it is on the website.');
   });
 
@@ -426,8 +953,11 @@
   }
 
   renderDays();
+  renderPrices();
+  renderContact();
   renderWindows();
   refresh();
+  pickSavingMode();
 })();
 </script>
 

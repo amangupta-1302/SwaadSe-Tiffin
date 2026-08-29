@@ -1,0 +1,5 @@
+# Netlify and Cloudflare Pages read this file. One rule, one reason: a menu or
+# price change has to appear straight away, rather than whenever each visitor's
+# browser next decides to check. On Apache the same rule goes in a .htaccess.
+/js/content.js
+  Cache-Control: no-cache, must-revalidate

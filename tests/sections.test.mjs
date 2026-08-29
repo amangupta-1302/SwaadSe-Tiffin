@@ -114,9 +114,17 @@ test('content.js exposes a full seven-day menu with Sunday closed', async () => 
   for (const day of weeklyMenu.slice(0, 6))
     assert.ok(day.items.length >= 3, `${day.day} needs at least 3 dishes listed`);
 
-  assert.equal(deliveryWindows.length, 2);
-  assert.equal(deliveryWindows[0].startHour, 7);
-  assert.equal(deliveryWindows[1].startHour, 16);
+  // The owner may run any number of windows (the admin has add/remove), so
+  // the shape is pinned rather than the count: every window must be something
+  // the "Next delivery" tag can actually render.
+  assert.ok(deliveryWindows.length >= 1, 'at least one delivery window');
+  for (const win of deliveryWindows) {
+    assert.ok(typeof win.label === 'string' && win.label.trim().length > 0,
+      'every delivery window needs customer-readable text');
+    assert.ok(Number.isInteger(win.startHour) && win.startHour >= 0 && win.startHour <= 23);
+    assert.ok(Number.isInteger(win.endHour) && win.endHour > win.startHour,
+      'a delivery window must end after it starts');
+  }
 });
 
 test('content.js is written for a non-developer to edit', () => {
@@ -152,6 +160,56 @@ test('scroll-reveal sections are visible without JavaScript', () => {
     'the .js class must be set inline in <head>, not from an external file');
   // And a timer must reveal everything if main.js never runs.
   assert.match(html, /reveal-all/, 'no safety net if main.js fails to load');
+});
+
+test('the reduced-motion reset outranks the rule that hides reveals', () => {
+  // A media query contributes no specificity. `.reveal { opacity: 1 }` inside
+  // prefers-reduced-motion therefore LOSES to `.js .reveal { opacity: 0 }`
+  // (0,1,0 against 0,2,0) and quietly does nothing at all. Measured in a real
+  // browser: with .reveal-all and .is-visible stripped, the under-specified
+  // version left all 58 revealed groups at opacity 0 and the corrected one left
+  // none. It only ever looked correct because the safety net and the observer
+  // both overrode it a moment later — so this guard was decoration resting on
+  // two unrelated mechanisms, which is worse than no guard at all.
+  const css = read('css/styles.css').replace(/\/\*[\s\S]*?\*\//g, '');
+  const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+  const reset = [...reduced.matchAll(/([^{}]*)\{([^}]*)\}/g)]
+    .find(([, selector, body]) => /\.reveal\b/.test(selector) && /opacity:\s*1/.test(body));
+
+  assert.ok(reset, 'prefers-reduced-motion must restore .reveal to a visible resting state');
+  assert.match(reset[1].trim(), /^\.js\s+\.reveal\b/,
+    `"${reset[1].trim()}" is less specific than the ".js .reveal" rule it has to ` +
+    `beat, so it never applies and a reduced-motion visitor can get a blank page`);
+});
+
+test('entrance animations cannot leave content invisible', () => {
+  // The rule above only guards `.reveal`. Entrance animations hide content a
+  // second way: a keyframe starting at opacity 0 with `backwards` fill holds
+  // the element invisible through its delay. Unscoped, that blanks the hero for
+  // anyone without JavaScript; unreset, it strands anyone who asked for less
+  // motion on a permanently empty page.
+  // Comments first, or a comment sitting above a rule gets captured as part of
+  // its selector and the assertion reports nonsense.
+  const css = read('css/styles.css').replace(/\/\*[\s\S]*?\*\//g, '');
+
+  const hidingKeyframes = [...css.matchAll(/@keyframes\s+([\w-]+)\s*\{([\s\S]*?)\n\}/g)]
+    .filter(([, , body]) => /(?:from|0%)\s*\{[^}]*opacity:\s*0/.test(body))
+    .map(([, name]) => name);
+  assert.ok(hidingKeyframes.length > 0, 'expected the entrance animations to exist at all');
+
+  const reducedBlock = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+
+  for (const name of hidingKeyframes) {
+    for (const [, selector] of css.matchAll(new RegExp(`([^{}]*)\\{[^}]*animation:[^;}]*\\b${name}\\b`, 'g'))) {
+      const rule = selector.trim().split(',').map(s => s.trim());
+      for (const one of rule)
+        assert.ok(/^\.js\b/.test(one),
+          `"${one}" runs ${name}, which starts invisible, without requiring the .js class — ` +
+          `a visitor with JavaScript off would never see it`);
+    }
+    assert.ok(reducedBlock.includes(name) || /animation:\s*none\s*!important/.test(reducedBlock),
+      `${name} is never cancelled for prefers-reduced-motion`);
+  }
 });
 
 // ─── why choose us ───────────────────────────────────────────────────────────
@@ -214,6 +272,159 @@ test('all eight food packs with their prices and quantities', () => {
   assert.ok(html.includes('2 pcs'), 'Butter Naan quantity must be stated');
 });
 
+// ─── prices come from one place ──────────────────────────────────────────────
+/**
+ * Every element carrying data-price="…", with the ₹ amount baked into the
+ * markup as the no-JavaScript fallback. On a link the amount lives inside the
+ * prefilled WhatsApp message, not the link text.
+ * @returns {Array<{tag: string, key: string, amount: number}>}
+ */
+const taggedPrices = () =>
+  [...html.matchAll(/<(\w+)((?:[^>]*?)\bdata-price="([^"]+)"(?:[^>]*?))>([^<]*)/g)]
+    .map(([, tag, attrs, key, text]) => {
+      const found = tag === 'a' ? attrs.match(/%E2%82%B9(\d+)/) : text.match(/^₹(\d+)$/);
+      assert.ok(found, `data-price="${key}" on <${tag}> carries no ₹ amount`);
+      return { tag, key, amount: Number(found[1]) };
+    });
+
+test('every data-price key exists in content.js, and every price is used', async () => {
+  globalThis.window = globalThis;
+  await import('../js/content.js');
+  const { prices } = globalThis.SITE;
+
+  assert.ok(prices, 'content.js has no prices block');
+  const used = new Set(taggedPrices().map(p => p.key));
+
+  for (const key of used)
+    assert.ok(Number.isInteger(prices[key]) && prices[key] > 0,
+      `index.html asks for price "${key}" but content.js has no whole-rupee value for it`);
+
+  for (const key of Object.keys(prices))
+    assert.ok(used.has(key),
+      `content.js defines price "${key}" but nothing in index.html uses it — dead price`);
+});
+
+test('the admin editor offers exactly the prices the page uses', async () => {
+  await import('../admin/generate.js');
+  const keys = globalThis.SwaadSeAdmin.PRICE_FIELDS.map(f => f.key);
+
+  assert.equal(new Set(keys).size, keys.length, 'PRICE_FIELDS has a duplicate key');
+  assert.deepEqual(keys.slice().sort(), [...new Set(taggedPrices().map(p => p.key))].sort(),
+    'the price boxes in /admin/ no longer match the prices on the page');
+});
+
+test('a price and the WhatsApp message quoting it never disagree', () => {
+  // The fallback amounts are what a visitor with JavaScript off sees, and what
+  // the customer's prefilled message says. Two copies of ₹170 that drift apart
+  // means someone taps "Order This Plan" and quotes a price we do not charge.
+  const byKey = new Map();
+  for (const { key, amount, tag } of taggedPrices()) {
+    if (byKey.has(key))
+      assert.equal(amount, byKey.get(key),
+        `"${key}" is written as ₹${byKey.get(key)} in one place and ₹${amount} on a <${tag}>`);
+    else byKey.set(key, amount);
+  }
+  assert.ok(byKey.size >= 15, `only ${byKey.size} prices are wired to content.js`);
+});
+
+test('the prices Google reads match the prices on the page', () => {
+  // These three are read by search engines and social previews from the served
+  // HTML, before any JavaScript runs, so they cannot be filled in from
+  // content.js. They are listed in EDITING-GUIDE section 4 as a manual step.
+  const baked = new Map(taggedPrices().map(p => [p.key, p.amount]));
+  const planPrices = [...baked].filter(([k]) => k.startsWith('plan-')).map(([, v]) => v);
+
+  const meta = html.match(/name="description" content="([^"]+)"/)[1];
+  assert.match(meta, new RegExp(`from ₹${Math.min(...planPrices)} a meal`),
+    'the search-result description quotes a cheapest price the page no longer shows');
+  assert.match(meta, new RegExp(`monthly from ₹${baked.get('tier-one-meal')}`),
+    'the search-result description quotes a stale monthly price');
+
+  const og = html.match(/property="og:description" content="([^"]+)"/)[1];
+  assert.match(og, new RegExp(`from ₹${Math.min(...planPrices)} a meal`),
+    'the WhatsApp/social sharing preview quotes a stale price');
+
+  const range = html.match(/"priceRange":\s*"₹(\d+)–₹(\d+)"/);
+  assert.ok(range, 'the business listing has no priceRange');
+  assert.equal(Number(range[1]), Math.min(...planPrices), 'priceRange low end is stale');
+  assert.equal(Number(range[2]), Math.max(...planPrices), 'priceRange high end is stale');
+});
+
+// ─── phone numbers and address come from one place ───────────────────────────
+test('every phone number the page shows is one content.js defines', async () => {
+  globalThis.window = globalThis;
+  await import('../js/content.js');
+  const { contact } = globalThis.SITE;
+  assert.ok(contact, 'content.js has no contact block');
+
+  const slots = [...new Set([...html.matchAll(/data-phone="(\d+)"/g)].map(m => Number(m[1])))];
+  assert.ok(slots.length >= 3, `expected three phone slots, found ${slots.length}`);
+  for (const slot of slots)
+    assert.ok(/^[6-9]\d{9}$/.test(String(contact.phones[slot] || '')),
+      `index.html shows phone slot ${slot} but content.js has no 10-digit number for it`);
+
+  // Every tel: link must be wired, or that one keeps ringing the old number
+  // after the owner changes it — the failure nobody notices until an ad runs.
+  const telLinks = [...html.matchAll(/<a[^>]*href="tel:[^"]*"[^>]*>/g)].map(m => m[0]);
+  assert.ok(telLinks.length >= 9, `expected at least 9 tel: links, found ${telLinks.length}`);
+  for (const link of telLinks)
+    assert.match(link, /data-phone="\d+"/, `an untagged tel: link would never update:\n  ${link}`);
+});
+
+test('every WhatsApp link points at one single number', async () => {
+  globalThis.window = globalThis;
+  await import('../js/content.js');
+  const { whatsapp } = globalThis.SITE.contact;
+  assert.match(whatsapp, /^91[6-9]\d{9}$/, 'the WhatsApp number needs its 91 country code');
+
+  // Deliberately NOT compared against content.js. The amounts and numbers baked
+  // into index.html are the last published values and the no-JavaScript
+  // fallback; once the client edits them in /admin/ the two legitimately differ,
+  // and a test that failed on that would cry wolf after every real change.
+  // What must always hold is that the 25 baked links agree with each other —
+  // one stale link among them is a customer messaging an abandoned number.
+  const numbers = new Set([...html.matchAll(/wa\.me\/(\d+)/g)].map(m => m[1]));
+  assert.equal(numbers.size, 1,
+    `index.html mixes ${numbers.size} different WhatsApp numbers: ${[...numbers].join(', ')}`);
+});
+
+test('every address slot the page asks for is one main.js can fill', async () => {
+  const known = ['line1', 'line2', 'city-state', 'street', 'short'];
+  const used = new Set([...html.matchAll(/data-contact="([a-z0-9-]+)"/g)].map(m => m[1]));
+
+  assert.ok(used.size >= 4, `expected several address slots, found ${used.size}`);
+  for (const slot of used)
+    assert.ok(known.includes(slot),
+      `index.html asks for address slot "${slot}", which js/main.js does not fill in — ` +
+      `that line would silently keep whatever is baked into the HTML forever`);
+
+  // Every slot main.js supports should be reachable from the page, or it is
+  // dead code pretending to be a feature.
+  const main = read('js/main.js');
+  for (const slot of known)
+    assert.ok(main.includes(`'${slot}'`) || main.includes(`${slot},`) || main.includes(`${slot}:`),
+      `js/main.js no longer produces address slot "${slot}"`);
+});
+
+test('the legal pages carry the same phone number and address as the front page', () => {
+  // privacy.html and terms.html deliberately load no JavaScript, so /admin/
+  // cannot reach them. That makes them the one place a contact change can be
+  // left half-finished — worth failing over, since a privacy policy naming a
+  // dead number is the sort of thing a customer quotes back at you.
+  const baked = html.match(/<a[^>]*href="tel:\+91(\d{10})"/)[1];
+  const street = html.match(/data-contact="street">([^<]+)</)[1];
+
+  for (const page of ['privacy.html', 'terms.html']) {
+    const source = read(page);
+    assert.ok(source.includes(baked),
+      `${page} does not mention ${baked}, the number index.html shows — update it, see EDITING-GUIDE 5b`);
+    assert.ok(source.includes(street),
+      `${page} does not mention "${street}" — its address is out of step with index.html`);
+    assert.ok(!/<script/.test(source),
+      `${page} has gained a <script>; if that is intentional, wire its contact details up too`);
+  }
+});
+
 // ─── how it works ────────────────────────────────────────────────────────────
 test('four numbered steps in a real ordered list', () => {
   const ol = html.match(/<ol class="steps[^"]*"([\s\S]*?)<\/ol>/);
@@ -268,8 +479,10 @@ test('FAQ schema text is byte-identical to the answers on the page', () => {
     .map(m => JSON.parse(m[1])).find(o => o['@type'] === 'FAQPage');
   assert.equal(faq.mainEntity.length, 6, 'schema FAQ count must match the page');
 
+  // Prices inside an answer are wrapped in <span data-price> so JavaScript can
+  // update them; the words and amounts still have to match the schema exactly.
   const visible = [...html.matchAll(/<div class="faq__answer">([\s\S]*?)<\/div>/g)]
-    .map(m => m[1].trim());
+    .map(m => m[1].replace(/<\/?span[^>]*>/g, '').trim());
   assert.equal(visible.length, 6);
 
   const decode = s => s.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"');

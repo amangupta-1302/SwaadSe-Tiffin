@@ -13,7 +13,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 
 const read = f => readFileSync(new URL(`../${f}`, import.meta.url), 'utf8');
 const raw = read('index.html');
@@ -72,11 +72,20 @@ const over = (base, overlayHex, alpha) => {
 
 test('text over translucent overlays still meets AA', () => {
   const GREEN = '#2E7D32';
+  // A tier card is now a nested enclosure: the tray darkens the band by .10 and
+  // the plate darkens THAT by a further .24 (.30 on the lead card). Text sits on
+  // the plate, so it is the composite of both layers that has to clear AA —
+  // asserting either alpha alone would measure a surface no one reads text on.
+  const tray = over(GREEN, '#000000', 0.10);
+  const plate = over(tray, '#000000', 0.24);
+  const leadPlate = over(tray, '#000000', 0.30);
   const cases = [
-    ['#FFFFFF', over(GREEN, '#000000', 0.16), 'white on a tier card'],
-    ['#EDF6ED', over(GREEN, '#000000', 0.16), 'tier note on a tier card'],
-    ['#FFFFFF', over(GREEN, '#000000', 0.22), 'white on the lead tier card'],
-    ['#EDF6ED', over(GREEN, '#000000', 0.22), 'tier note on the lead tier card'],
+    ['#FFFFFF', plate, 'white on a tier card'],
+    ['#EDF6ED', plate, 'tier note on a tier card'],
+    ['#FFFFFF', leadPlate, 'white on the lead tier card'],
+    ['#EDF6ED', leadPlate, 'tier note on the lead tier card'],
+    // The eyebrow pill on the green band darkens for the same reason.
+    ['#EDF6ED', over(GREEN, '#000000', 0.18), 'band eyebrow pill label'],
   ];
   for (const [fg, bg, label] of cases) {
     const r = ratio(fg, bg);
@@ -101,6 +110,8 @@ test('CTA band and step markers meet AA', () => {
     ['#2A2320', '#FFEEDC', 'CTA band heading on saffron wash'],
     ['#6B5D54', '#FFEEDC', 'CTA band body on saffron wash'],
     ['#1E5B22', '#E7F2E8', 'step number on leaf wash'],
+    // Eyebrows became pill badges, so the accent is read on the wash, not cream.
+    ['#A64B00', '#FFEEDC', 'eyebrow pill label on saffron wash'],
   ]) {
     const r = ratio(fg, bg);
     assert.ok(r >= 4.5, `${label}: ${r.toFixed(2)}:1 is below AA 4.5:1`);
@@ -134,6 +145,28 @@ test('fonts are self-hosted and the critical face is preloaded', () => {
   assert.ok(!/fonts\.googleapis\.com|fonts\.gstatic\.com/.test(html),
     'no third-party font requests allowed');
   assert.match(html, /<link rel="preload"[^>]+fonts\/anek-latin\.woff2[^>]+crossorigin/);
+});
+
+test('every file the page asks for is actually there', () => {
+  // The three font files were once moved into admin/ by accident. Nothing
+  // failed loudly: the browser fell back to a system font and the page just
+  // quietly stopped looking like itself. A 404 is invisible until you check.
+  const roots = { 'index.html': html, 'css/styles.css': read('css/styles.css') };
+  const referenced = [];
+
+  for (const [from, source] of Object.entries(roots)) {
+    const dir = from.includes('/') ? from.slice(0, from.lastIndexOf('/') + 1) : '';
+    for (const [, url] of source.matchAll(/(?:href|src)="([^"]+)"|url\('([^']+)'\)/g).map(m => [m[0], m[1] ?? m[2]])) {
+      if (!url || /^(https?:|data:|mailto:|tel:|#)/.test(url)) continue;
+      // Resolve "../fonts/x" written inside css/ back to a repo-root path.
+      referenced.push([from, (dir + url).replace(/[^/]+\/\.\.\//g, '')]);
+    }
+  }
+
+  assert.ok(referenced.length >= 10, `only found ${referenced.length} local assets; the scan is not working`);
+  for (const [from, path] of referenced)
+    assert.ok(existsSync(new URL(`../${path}`, import.meta.url)),
+      `${from} asks for "${path}", which does not exist — it would 404 in production`);
 });
 
 // ─── Structured data ─────────────────────────────────────────────────────────

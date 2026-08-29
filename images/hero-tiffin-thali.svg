@@ -1,11 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" aria-label="HERO — tiffin box with dal, sabji, rice, roti placeholder">
-  <rect width="1200" height="900" fill="#FFF8F0"/>
-  <rect x="1" y="1" width="1198" height="898" fill="none" stroke="#E4E0D8" stroke-width="2" stroke-dasharray="10 8"/>
-  <circle cx="600" cy="405" r="153" fill="none" stroke="#F57C00" stroke-width="8.415000000000001"/>
-  <circle cx="600" cy="405" r="94.86" fill="none" stroke="#E4E0D8" stroke-width="6.885"/>
-  <text x="600" y="661.5" text-anchor="middle" fill="#6B5D54"
-    font-family="system-ui, sans-serif" font-size="52"
-    font-weight="600" letter-spacing="1.5">HERO — tiffin box with dal, sabji, rice, roti</text>
-  <text x="600" y="715.5" text-anchor="middle" fill="#E4E0D8"
-    font-family="system-ui, sans-serif" font-size="38">replace with a real photo · 1200×900</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" aria-label="A thali of dal, sabji, raita, pickle, rice and rotis">
+<rect width="1200" height="900" fill="#FFF8F0"/>
+
+  <circle cx="600" cy="450" r="406" fill="#C9C3B8" opacity=".5"/>
+  <circle cx="600" cy="450" r="396" fill="#FFFFFF"/>
+  <circle cx="600" cy="450" r="368.28000000000003" fill="none" stroke="#E4E0D8" stroke-width="3"/>
+  
+  <circle cx="374.0289717282715" cy="376.57756213651254" r="79.2" fill="#E4E0D8"/>
+  <circle cx="374.0289717282715" cy="376.57756213651254" r="68.904" fill="#E9A33C"/>
+  <path d="M330.46897172827147 352.81756213651255 a 49.104 49.104 0 0 1 39.6 -22.176000000000002"
+        fill="none" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="10.296000000000001" stroke-linecap="round"/>
+  <circle cx="503.3593736051899" cy="232.94159926411803" r="79.2" fill="#E4E0D8"/>
+  <circle cx="503.3593736051899" cy="232.94159926411803" r="68.904" fill="#57A05A"/>
+  <path d="M459.7993736051899 209.18159926411803 a 49.104 49.104 0 0 1 39.6 -22.176000000000002"
+        fill="none" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="10.296000000000001" stroke-linecap="round"/>
+  <circle cx="696.64062639481" cy="232.94159926411797" r="79.2" fill="#E4E0D8"/>
+  <circle cx="696.64062639481" cy="232.94159926411797" r="68.904" fill="#FFFDF8"/>
+  <path d="M653.08062639481 209.18159926411798 a 49.104 49.104 0 0 1 39.6 -22.176000000000002"
+        fill="none" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="10.296000000000001" stroke-linecap="round"/>
+  <circle cx="825.9710282717285" cy="376.5775621365125" r="79.2" fill="#E4E0D8"/>
+  <circle cx="825.9710282717285" cy="376.5775621365125" r="68.904" fill="#C3502A"/>
+  <path d="M782.4110282717286 352.8175621365125 a 49.104 49.104 0 0 1 39.6 -22.176000000000002"
+        fill="none" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="10.296000000000001" stroke-linecap="round"/>
+  <ellipse cx="469.32" cy="608.4" rx="110.88000000000001" ry="75.24" fill="#FBF3E6" stroke="#E4E0D8" stroke-width="2"/>
+  <ellipse cx="425.76" cy="592.56" rx="13.860000000000001" ry="6.732" fill="#D2A971" opacity=".5"/><ellipse cx="477.24" cy="628.1999999999999" rx="13.860000000000001" ry="6.732" fill="#D2A971" opacity=".5"/><ellipse cx="520.8" cy="596.52" rx="13.860000000000001" ry="6.732" fill="#D2A971" opacity=".5"/><ellipse cx="457.44" cy="572.76" rx="13.860000000000001" ry="6.732" fill="#D2A971" opacity=".5"/>
+  
+  <ellipse cx="734.64" cy="592.56" rx="114.83999999999999" ry="79.2"
+           fill="#E9CBA0" stroke="#D2A971" stroke-width="2.5"/>
+  <ellipse cx="731.64" cy="583.56" rx="114.83999999999999" ry="79.2"
+           fill="#E9CBA0" stroke="#D2A971" stroke-width="2.5"/>
+  <ellipse cx="728.64" cy="574.56" rx="114.83999999999999" ry="79.2"
+           fill="#E9CBA0" stroke="#D2A971" stroke-width="2.5"/>
 </svg>

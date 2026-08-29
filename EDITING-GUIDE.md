@@ -24,11 +24,12 @@ tells you exactly what — undo your last change and try again.
 
 ## 1. Today's menu and today's special — the weekly job
 
-**The easy way: open `/admin/` on your website.** Enter your password, edit the
-form, press **Copy the file**, then paste it over `js/content.js` in your hosting
-File Manager. The editor checks your work as you type and refuses to save
-anything broken, so the layout cannot break. Full setup is in README.md under
-**Admin area**.
+**The easy way: open `/admin/` on your website.** Edit the form, log in with
+your email and password at the bottom, and press **Save to the website** — it
+is live about a minute later. (Forgot the password? The login form has a
+"Forgot password?" button that emails you a reset link.) The editor checks your
+work as you type and refuses to save anything broken, so the layout cannot
+break. Full setup is in README.md under **Admin area** and in DEPLOY.md.
 
 Everything below describes editing the same file **by hand**, if you prefer that
 or the admin page is not set up yet.
@@ -74,28 +75,61 @@ Wednesday sees Wednesday first. You do not need to do anything for that.
 
 ## 2. Changing a price
 
-**File: `index.html`**
+**The easy way: open `/admin/` and use the Prices panel.** Every price on the
+website has its own box. Change the number, press **Copy the file**, paste it
+over `js/content.js`. That is the whole job.
 
-Search for `✏️ EDIT: PRICES`. Each plan has **two** places with the price:
+By hand, it is the same file: **`js/content.js`**, in the `prices` block at the
+bottom.
 
-```html
-<span class="price">₹120</span>
+```js
+prices: {
+  "plan-basic": 80,
+  "plan-standard": 120,
+  ...
+}
 ```
 
-and, further down in the same card, the WhatsApp message:
+**Write the number only** — no `₹`, no comma, no quote marks around the number.
+`120` is right; `"₹120"` and `1,200` are both wrong, and the website will keep
+showing the old price rather than a broken one.
 
-```html
-?text=Hi%20SwaadSe%20Tiffin%2C%20I%20want%20to%20order%20the%20Standard%20Veg%20Tiffin%20%28%E2%82%B9120%20per%20meal%29.
-```
+One number changes the price everywhere it appears: the card, the green monthly
+section, the sentence in the FAQ, **and the WhatsApp message the customer sends
+you**. You never have to change the same price twice.
 
-**Change both.** If you only change the first, customers will message you quoting
-your old price. In that long line, `%E2%82%B9` means `₹` and `%20` means a space —
-so `%E2%82%B9120` is `₹120`. Change only the digits.
+Which name is which:
 
-Food pack prices work the same way: the visible `₹180` and the `%E2%82%B9180`
-inside that pack's link.
+| Starts with | Where it appears |
+|---|---|
+| `plan-` | the four tiffin cards under "Choose Your Tiffin" |
+| `tier-` | the green Monthly Subscription section |
+| `pack-` | the Food Packs cards |
 
-Monthly plan prices are in the green section — search for `tier__price`.
+**The "Saves ₹200" badge looks after itself.** It is worked out from your two
+monthly prices. If you ever price the Lunch + Dinner plan so it is no longer
+cheaper than two single plans, the badge disappears rather than claim a saving
+you are not giving.
+
+### The three places prices are not updated automatically
+
+These are read by Google and by WhatsApp's link preview **before** the page
+runs, so they have to be text sitting in `index.html`. If you change the ₹80
+cheapest price, the ₹2400 monthly price, or the ₹170 top price, ask your
+developer to update these three lines too — or do it yourself, they are all in
+the first 60 lines of `index.html`:
+
+1. `<meta name="description"` — the grey text under your Google result
+2. `<meta property="og:description"` — the preview when someone shares your link
+3. `"priceRange": "₹80–₹170"` — the price range on your Google business listing
+
+Nothing breaks if you forget. Your website will be right and only those three
+descriptions will be out of date. `npm test` does not check them against
+`content.js`, precisely so that changing a price never makes the tests fail.
+
+> There is also a copy of every price written into `index.html` itself. That copy
+> is only seen by the rare visitor whose phone has JavaScript switched off.
+> Normal customers always see `js/content.js`.
 
 ---
 
@@ -134,29 +168,62 @@ See `IMAGES.md` for the full list of filenames and the size each one should be.
 
 ---
 
-## 5. Changing a phone number
+## 5. Changing a phone number or the address
 
-The primary number `7895590063` appears **33 times** across three files:
+**The easy way: open `/admin/` → "Phone numbers and address".** One box per
+number. Changing the main number updates every Call button on the website, and
+changing the WhatsApp number updates all 25 WhatsApp buttons.
 
-| File | Times |
-|---|---|
-| `index.html` | 31 |
-| `privacy.html` | 1 |
-| `terms.html` | 1 |
+By hand it is the `contact` block at the bottom of **`js/content.js`**:
 
-Use your editor's **Replace All** (Ctrl+H / Cmd+H) on each file: find
-`7895590063`, replace with your new number. Then check the count is zero:
-
-```bash
-grep -c 7895590063 index.html privacy.html terms.html
+```js
+contact: {
+  whatsapp: "917895590063",
+  phones: ["7895590063", "7900778393", "8859008393"],
+  addressLine1: "37/1 Om Vihar",
+  ...
+}
 ```
 
-The other two numbers (`7900778393`, `8859008393`) appear twice each, in the
-Contact section and the footer of `index.html`.
+Phone numbers are **10 digits, nothing else** — no `+91`, no spaces, no dashes.
+The website adds those itself. The WhatsApp number is the exception: it keeps
+`91` in front, because WhatsApp needs the country code.
 
-Numbers are written two ways and **both** must match:
-`tel:+917895590063` and `wa.me/917895590063` — note the `+91` on one and the bare
-`91` on the other. Replacing just the ten digits handles both correctly.
+The first number in `phones` is the main one, and every "Call Now" button uses
+it.
+
+### Two places that are not updated automatically
+
+Same rule as prices. These are read by Google before the page runs, so they are
+plain text in `index.html`:
+
+1. `"telephone"` and `"streetAddress"` in the business listing data near the top
+2. the map link — search `data-map-src` and `google.com/maps`
+
+Also update your **Google Business Profile** separately. That is what most
+customers actually see, and it is not part of this website.
+
+---
+
+## 5b. The Privacy and Terms pages — developer note
+
+`privacy.html` and `terms.html` load **no JavaScript at all**, on purpose: they
+are two pages of text that never change and do not need any. So the phone number
+and address written into them are *not* updated by `/admin/`.
+
+Each holds the main number once and the address two or three times. After a
+number or address change, update them by hand:
+
+```bash
+grep -n '7895590063\|Om Vihar' privacy.html terms.html
+```
+
+`npm test` fails if these two pages disagree with the address and number baked
+into `index.html`, so a half-finished change gets caught rather than shipped.
+
+The same applies to the business-listing data and the map link in `index.html`
+itself (section 5 above). None of it is urgent — the front page is right, and
+these are secondary — but do it before the old number stops working.
 
 ---
 

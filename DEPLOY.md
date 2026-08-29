@@ -29,20 +29,24 @@ only the admin login is affected.
 
 ## 1. Put the code on GitHub
 
-There is no remote set up yet. Create an **empty** repository on GitHub —
-private is fine, Netlify can read private repos — then:
+**Done.** The code is on GitHub at
+`github.com/amangupta-1302/SwaadSe-Tiffin`, and the default and production
+branch is **`main`**.
 
-```bash
-cd /Users/amann/Dev-work/SwaadSe-Tiffin
-git add -A
-git commit -m "feat: admin saving, editable prices and contact details"
-git remote add origin https://github.com/YOUR-NAME/swaadse-tiffin.git
-git push -u origin master
-```
+That branch name matters more than it looks. `GITHUB_BRANCH` in step 5 is the
+branch the save function commits to, and `netlify/functions/save.mjs` defaults
+it to `main` when it is unset — so with `main` as the default, that variable can
+simply be left out. It only has to be set when the production branch is called
+something else.
 
-> Note the branch is `master`, not `main`. Either is fine — just use the same
-> name in `GITHUB_BRANCH` below. To rename it now:
-> `git branch -M main` before pushing.
+Netlify picks up the repository's default branch as the production branch when
+you import it, so the two agree by default. If you ever change one, change both,
+or the client's saves will commit to a branch nothing is watching: the save
+succeeds, the commit appears on GitHub, and the website never updates.
+
+> Starting over on a fresh machine or a new repo? Create an **empty** repository
+> on GitHub (private is fine — Netlify can read private repos), then
+> `git remote add origin <url>` and `git push -u origin main`.
 
 ## 2. Connect Netlify
 
@@ -133,8 +137,8 @@ variable**, for each:
 | `SUPABASE_ANON_KEY` | the anon (public) key from step 4 | |
 | `ADMIN_EMAIL` | the client's login email | the only account allowed to save |
 | `GITHUB_TOKEN` | the token from step 3 | |
-| `GITHUB_REPO` | `YOUR-NAME/swaadse-tiffin` | owner slash repo, nothing else |
-| `GITHUB_BRANCH` | `master` or `main` | must match what you pushed |
+| `GITHUB_REPO` | `amangupta-1302/SwaadSe-Tiffin` | owner slash repo, nothing else |
+| `GITHUB_BRANCH` | *leave unset* | optional; defaults to `main`, which is this repo's production branch. Set it only if that ever changes |
 
 Then **Deploys → Trigger deploy → Clear cache and deploy site**, because
 environment variables are only read at run time by a fresh deploy.
@@ -189,9 +193,11 @@ SUPABASE_URL=https://abcdefgh.supabase.co
 SUPABASE_ANON_KEY=eyJhbGci…
 ADMIN_EMAIL=owner@example.com
 GITHUB_TOKEN=github_pat_…
-GITHUB_REPO=YOUR-NAME/swaadse-tiffin
-GITHUB_BRANCH=master
+GITHUB_REPO=amangupta-1302/SwaadSe-Tiffin
 ```
+
+`GITHUB_BRANCH` is omitted deliberately — it defaults to `main`. Add it only
+while testing against a throwaway branch, as below.
 
 `.env` is gitignored, and must stay that way — it holds a real GitHub token. It
 is only needed before the site exists on Netlify; once step 2 is done, `netlify

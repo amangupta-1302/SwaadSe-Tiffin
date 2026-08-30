@@ -1,255 +1,231 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) working in this repository.
 
 ## What this is
 
 A static, single-page Google Ads landing site for a tiffin (home-cooked meal
 delivery) business in Agra. Its only job is turning paid search clicks into
-WhatsApp inquiries — there is no ordering, no payment, no accounts.
+WhatsApp inquiries — no ordering, no payment, no accounts.
 
-**No build step and no dependencies.** The only server-side code is two Netlify
-functions — one that lets the owner save changes, one daily keep-alive ping for
-the free Supabase project (see below). Anything that would add a bundler, a
-framework, or a runtime dependency is working against the design, not extending
-it. Supabase is reached with raw `fetch` on four endpoints — deliberately no
-supabase-js, neither from a CDN nor vendored.
+**No build step, no dependencies.** Server code is three files. Supabase is
+reached with raw `fetch` — deliberately no supabase-js, not from a CDN and not
+vendored. `render.js` transforms HTML by string replacement because
+`HTMLRewriter` is absent from Netlify's Deno runtime and every workaround is a
+remote import. A bundler, framework or runtime dependency works against the
+design, not with it.
 
 ## Commands
 
-```bash
-npm test                                            # full suite, ~1s, must end "fail 0"
-node --test tests/save.test.mjs                     # one file
-node --test --test-name-pattern "…" "tests/*.test.mjs"   # one test by name
-npm run serve                                       # python3 -m http.server 8080 (no /api/save)
-netlify dev                                         # …with the save function, if the CLI is installed
-node tools/make-placeholders.mjs                    # regenerate placeholder images
-node tools/make-og-image.mjs                        # regenerate the OG share card
+| Command | What | Note |
+|---|---|---|
+| `npm test` | 126 tests, 6 files, ~85 ms | must end `fail 0` |
+| `node --test tests/save.test.mjs` | one file | |
+| `node --test --test-name-pattern "…" "tests/*.test.mjs"` | one test | **quote the glob** — bare `tests/` dies with `MODULE_NOT_FOUND` |
+| `npm run serve` | `python3 -m http.server 8080` | no `/api/save`, no edge function |
+| `netlify dev` | both functions, `:8888` | needs the CLI |
+| `node tools/make-placeholders.mjs` | placeholder images | |
+| `node tools/make-og-image.mjs` | the OG share card | |
+
+Use a server, never a double-clicked file, or fonts and JSON-LD behave
+differently from production.
+
+## How a change reaches a visitor
+
+```
+  Owner ──edit──▶ /admin/ ──POST + token──▶ /api/save
+                                                 │
+                                    verify token │ email == ADMIN_EMAIL
+                                                 ▼
+                                             Supabase
+                                          site_state row
+                                     (the INSERT is the publish)
+                                                 │
+  Visitor ──GET /──▶ render.js ──newest row──────┘
+                         │        (30s in-process memo)
+                         ▼
+                   filled HTML     DB down? ──▶ baked index.html
 ```
 
-Quote the glob and don't pass a bare `tests/` directory — current Node resolves
-that as a module path and dies with `MODULE_NOT_FOUND`.
+**The latest `site_state` row is the live website.** `/admin/` is the only
+thing that publishes, the INSERT *is* the publish, and no deploy runs. The
+table is append-only by omission — no update or delete policy — so every past
+state stays recoverable.
 
-Use a server rather than opening `index.html` directly, or fonts and JSON-LD
-behave differently from production.
+Reading server-side is the whole point: the no-JS contract survives, crawlers
+see real content, no second origin sits in front of the first paint, and a
+paused free-tier Supabase cannot take down a page Ads is billing clicks on.
 
-## The tests are the specification
+**Every failure path returns the response untouched.** No path produces a blank
+menu, and there must never be one:
 
-`tests/` is not coverage-chasing — each assertion pins a business fact, a
-conversion mechanic, or an accessibility guarantee that is easy to break by
-accident and invisible when broken. Before "fixing" something that looks wrong,
-check whether a test deliberately asserts it. Notable examples:
+```
+  GET /  ──▶  render.js
+                │
+          env vars set? ───── no ──┐
+                │ yes              │
+          Supabase reachable? ─ no ┤
+                │ yes              │
+          row returned? ───── no ──┤
+                │ yes              │
+          transform threw? ── yes ─┤
+                │ no               │
+                ▼                  ▼
+          filled HTML       response untouched
+                            = baked index.html
+                            (stale, but real prices)
+```
 
-- **White text on `#F57C00` (2.70:1) and `#25D366` (1.98:1) both fail WCAG AA.**
-  The buttons keep those exact brand fills with near-black labels instead.
-  `tests/audit.test.mjs` computes contrast and fails if white returns.
-- **The `<h1>` must be the LCP element**, not the hero photo. Both hero CTAs sit
-  before the hero image in source order specifically to achieve that.
-- **No invented social proof.** Reviews are marked `data-placeholder="true"`,
-  and `aggregateRating` is deliberately absent from the schema. Publishing
-  fabricated testimonials or ratings risks Google Ads suspension.
-- **Nothing may load from a third-party origin.** Fonts are self-hosted; the
-  Google Map is a click-to-load facade.
+## Files that matter
 
-## Architecture
+| File | Role |
+|---|---|
+| `index.html` | the page. Baked values are three things at once: the template `render.js` fills, the outage fallback, and what most tests assert against |
+| `js/content.js` | outage fallback **only** — `todaysSpecial`, `weeklyMenu`, `deliveryWindows`, `prices`, `contact` on `window.SITE`. Nothing publishes from it; keep it roughly in step |
+| `js/main.js` | progressive enhancement. Exports `addressSlots`, `nextDelivery`, `menuIndexFor` as pure functions |
+| `admin/generate.js` | `validate()` + registries (`PRICE_FIELDS` 15, `ADDRESS_FIELDS` 4, `PHONE_COUNT` 3), pure and DOM-free, shared by three consumers |
+| `admin/index.html` | the editor. Must never re-implement `generate.js`. `#savebar` is a phone-width sticky bar mirroring dirty state + blocking-error count; it hides whenever `state` deep-equals `loaded` |
+| `netlify/edge-functions/render.js` | fills served HTML from the newest row |
+| `netlify/functions/save.mjs` | verifies the login, appends the row |
+| `netlify/functions/ping.mjs` | daily PostgREST hit so the free project never pauses. No table, no policy |
+| `supabase/schema.sql` | `site_state` + RLS. Run once |
 
-### Progressive enhancement is a hard contract
+Seams both `render.js` and `main.js` read: `data-price`, `data-phone`,
+`data-contact`, `.js-menu`, `#todays-special`.
 
-`index.html` is fully functional with JavaScript disabled: all seven menu days
-visible, all six FAQ answers expandable, every button live. `js/main.js` only
-improves on that — it never renders anything the page needs.
+`render.js` routes itself via its in-file `config.path` (`/`, `/index.html`,
+`/privacy.html`, `/terms.html`, `/admin/`) — `netlify.toml` has **no**
+`[[edge_functions]]` block.
 
-Animation is the trap here, in two forms, and each has its own test:
+Fixed by design: 7 days, 15 price keys, 3 phone slots — each welded to baked
+markup, so "make it dynamic" means regenerating markup, not just data. Dishes
+per day and delivery windows do have true add/remove.
 
-- A `.reveal` rule that sets `opacity: 0` must be scoped under the `.js` class
-  (set by an inline script in `<head>`), or a visitor without JavaScript sees a
-  blank page below the hero.
-- An entrance keyframe starting at `opacity: 0` with `backwards` fill hides
-  content the same way, for the length of its delay. Every rule using one must
-  also be `.js`-scoped **and** cancelled in the `prefers-reduced-motion` block —
-  otherwise someone who asked for less motion gets a permanently empty page
-  rather than a still one.
+## Prices — one number, two rendered forms
 
-### Motion
+```
+              three files must agree on the key list
+   js/content.js        index.html          admin/generate.js
+      prices{}          data-price="…"        PRICE_FIELDS
+   (fallback copy)   (template + baked)    (drives the inputs)
+         └─────────────────┼─────────────────────┘
+                           │  15 keys: 4 plan- · 3 tier- · 8 pack-
+             ┌─────────────┴─────────────┐
+             ▼                           ▼
+        js/main.js                edge-functions/render.js
+      (in the browser)               (on the server)
+             │                           │
+             ├─ <span data-price>  ──▶  text
+             └─ <a href=wa.me…>    ──▶  rewrite href (₹ = %E2%82%B9)
 
-One signature, everything else quiet. This is a paid-traffic page on mid-range
-Android, so motion is transform/opacity only and buys no layout cost: measured
-LCP is the `<h1>` at ~80ms and CLS is 0.
+   NOT filled from data — search engines read these before any JS runs:
+      meta description · og:description · schema priceRange
+```
 
-- **The signature** is Today's Menu: picking a day replays `dish-in` on the
-  chips, 45ms apart, like katoris going onto a thali. `select()` in `js/main.js`
-  removes `.is-laying`, reads `offsetWidth` to force the removal to land, then
-  re-adds it — without that the browser folds both into one frame and nothing
-  replays.
-- **Grid stagger**: `main.js` moves `.reveal` off a `.grid`/`.tiers`/`.steps`
-  container onto its children and numbers them with `--i`, capped at 8. This
-  runs *before* the IntersectionObserver collects `.reveal`, or the children are
-  never watched.
-- **The hero cascade deliberately excludes the `<h1>`.** It is the LCP element;
-  animating it would slow the one metric Google scores here.
+Each WhatsApp CTA embeds its price *inside* the prefilled message, so `main.js`
+branches on `tagName === 'A'` and rewrites the href, not the text. Miss one and
+customers message you quoting a price you no longer charge.
 
-### `js/content.js` is the owner-edited data file
+**Tests compare structure, not values** — key sets match, and baked copies
+agree with each other. Baked amounts are the last published values, so once the
+client edits them an equality test would cry wolf.
 
-A non-developer edits this weekly — through `/admin/` or by hand. It holds
-`todaysSpecial`, `weeklyMenu`, `deliveryWindows`, `prices` and `contact` on
-`window.SITE`, wrapped in plain-English instructions. Keep the comments generous
-and the syntax boring — a test asserts it stays commented and hand-editable, and
-it is also the file the save function writes.
-
-Everything in it also exists as baked markup in `index.html`, which is the
-no-JavaScript fallback and the last-published state. Two sources of truth, on
-purpose. The seams are `data-price`, `data-phone`, `data-contact`, `.js-menu` and
-`#todays-special`.
-
-### Prices: one number, two rendered forms
-
-15 prices flow from `SITE.prices` into elements tagged `data-price`. The
-non-obvious half: each WhatsApp CTA embeds its price *inside the prefilled
-message* as `%E2%82%B9170` (URL-encoded ₹). `main.js` therefore branches on
-`tagName === 'A'` and rewrites the href instead of the text. Update one without
-the other and customers message you quoting a price you no longer charge.
-
-Three files must agree on the key list, and tests enforce it:
-`js/content.js` (`prices`) · `index.html` (`data-price`) · `admin/generate.js`
-(`PRICE_FIELDS`, which also drives the admin's input boxes).
-
-**Tests compare structure, not values.** Baked HTML amounts are the last
-published values; once the client edits them the two legitimately differ, so a
-test asserting equality would cry wolf after every real change. What is asserted
-is that the key sets match, and that the baked copies agree *with each other* —
-one stale WhatsApp link among 25 is a customer messaging a dead number.
+The three SEO mentions are checked against the **baked** amounts, never against
+`content.js` or the database: an `/admin/` price change cannot fail the suite,
+but hand-editing a baked `data-price` without the meta description will.
+EDITING-GUIDE §2 lists them.
 
 The "Saves ₹200" badge is computed from the two monthly prices and removes
 itself rather than claim a saving that no longer exists.
 
-**Deliberately not data-driven:** the meta description, `og:description` and
-schema `priceRange`. Search engines read those from served HTML before any
-JavaScript runs. `npm test` does *not* compare them to `content.js`, so that
-changing a price never breaks the suite; EDITING-GUIDE section 2 lists them as
-a manual step.
+## Contact details
 
-### `/admin/` — editor for menu, prices and contact details
+`SITE.contact` drives every number and the address. The 24 WhatsApp buttons
+share one number, so they are rewritten by selector (`a[href*="wa.me/"]`); the
+JSON-LD `target` is a 25th mention. `tel:` links differ per slot, so each
+carries `data-phone="<index>"` — on an `<a>` it sets the href, on a `<span>` the
+readable `78955 90063` form. Address slots come from
+`data-contact="line1|line2|city-state|street|short"`, built by `addressSlots()`.
 
-`admin/generate.js` holds `validate()`, `generate()` and the field registries
-(`PRICE_FIELDS`, `ADDRESS_FIELDS`, `PHONE_COUNT`) as pure, DOM-free values, so
-three consumers share one copy of the rules: the admin page's inputs, the Netlify
-save function, and the tests. This is the riskiest code in the repo — a malformed
-output means the live menu silently falls back to stale baked HTML and nobody
-notices for a week. `admin/index.html` must never re-implement them; a test fails
-if it does.
+## Invariants — do not "fix" these
 
-Validation is two-tier: `error` disables Save and Copy, `warn` is advice the
-owner can override.
+Each row is asserted in `tests/<name>.test.mjs`. Before changing something that
+looks wrong, check whether a test deliberately pins it.
 
-Dishes per day and delivery windows have true add/remove; the 7 days, the 15
-price keys and the 3 phone slots are fixed by design — each is welded to baked
-markup in `index.html`, so "make it dynamic" means regenerating markup, not
-just data. A phone-width sticky bar (`#savebar`) mirrors dirty state and the
-blocking-error count; it hides whenever `state` deep-equals `loaded`.
+| Rule | Why | Test |
+|---|---|---|
+| Brand fills `#F57C00` / `#25D366` keep **near-black** labels | white on them is 2.70:1 and 1.98:1 — fails AA | `audit` |
+| `<h1>` is the LCP element; both hero CTAs precede the hero image in source order | the one metric Google scores here. The hero cascade excludes the `<h1>` for this | `sections` |
+| Reviews stay `data-placeholder="true"`; `aggregateRating` stays absent | invented social proof risks Ads suspension | `audit`, `sections` |
+| No third-party origin — fonts self-hosted, map is a click-to-load facade | first paint | `audit` |
+| Page works fully with JS off: 7 menu days, 6 FAQ answers, every button | `main.js` improves, never renders | `sections` |
+| `.reveal` rules setting `opacity: 0` are scoped under `.js` | else no-JS visitors get a blank page below the hero | `sections` |
+| `opacity: 0` entrance keyframes with `backwards` fill are `.js`-scoped **and** cancelled under `prefers-reduced-motion` | else "less motion" means a permanently empty page, not a still one | `sections` |
+| `select()` removes `.is-laying`, reads `offsetWidth`, re-adds | without the forced reflow both fold into one frame and nothing replays | — |
+| `main.js` moves `.reveal` onto grid children (`--i`, cap 8) **before** the IntersectionObserver collects them | run it after and the children are never watched | — |
+| `js/content.js` stays generously commented and hand-editable | hand-editing is the only way it changes | `sections` |
+| `render.js` writes text only into elements with no nested tags (the `[^<]*`); anchors rewrite the opening tag alone | a price lives inside the prefilled message, not the link text | `render` |
+| `render.js` imports `addressSlots()` from `main.js`; price + phone rules are duplicated on purpose | see the `ponytail:` note there — fix both if you change either | `render`, `schedule` |
+| The `window.SITE` injection anchors to the `js/content.js` script tag, **not** `</head>` | that file assigns `window.SITE` too and last wins; `index.html` loads it in the head, `/admin/` at the end of `<body>` | `render` |
+| Digit-stripping and escaping in `render.js` are load-bearing | nothing normalises state; `validate()` accepts `78955 90063` | `render` |
+| The JSON-LD block is never filled in | kept a known manual step, like the meta description | `render` |
+| Address loop is `value !== undefined`, never `if (value)` | `addressLine2` is optional, so empty-vs-absent matters: no `addressLine1` → baked markup untouched, but past that an empty string **overwrites**. Truthy shows the visitor two addresses | `render`, `schedule`, `sections` |
+| `/admin/` fetches `/api/save` at an **absolute** path | relative resolves to `/admin/api/save`, unrouted — the page then quietly decides saving is unavailable | `admin` |
+| The admin page holds no Supabase config; `GET /api/save` hands it `{supabase:{url,anonKey}}` | public by design, but hardcoding fails a test | `admin` |
+| Session token lives in one JS variable — never localStorage, sessionStorage, cookies, IndexedDB | a test greps all four. Expiry is handled by re-login; edits survive in memory | `admin` |
+| Fail closed: any of the three env vars unset → 503; valid login, wrong email → 403 | the 403 backstops Supabase sign-ups being re-enabled | `save` |
+| Nothing is written until every check passes; a refused insert fails the save | `render.js` serves the latest row, not the latest *approved* one — a rejected save leaving a row would publish itself | `save` |
+| `validate()` is two-tier: `error` disables Save, `warn` is overridable advice | it is the **only** cleanup on the publish path — a rule it skips is one the visitor reads | `admin` |
+| `privacy.html` / `terms.html` load no JS, so `/admin/` cannot reach them; their phone and address must still match `index.html` | a half-finished contact change cannot ship quietly | `sections` |
 
-### Saving — `netlify/functions/save.mjs`
+## Gotchas that are procedures, not rules
 
-The deployed site is on **Netlify**; the owner's login lives in **Supabase**
-(one account, email + password, sign-ups disabled). `/admin/` POSTs to
-`/api/save` with the session token in the `Authorization` header. The function
-verifies the token with Supabase (`GET /auth/v1/user`), requires the email to
-equal `ADMIN_EMAIL`, re-runs `validate()`, and commits `js/content.js` to
-GitHub via the Contents API. Netlify redeploys on the commit, so a change is
-live in about a minute and every client edit is a revertible commit. After a
-successful commit the save is appended to the `site_state` table in Supabase
-(schema: `supabase/schema.sql`) **using the owner's own token** — RLS is the
-authorization, and no key that bypasses RLS exists anywhere in the system.
-
-The landing page **never reads from Supabase**. The database exists for login
-and edit history only; if it is down or paused, only the admin login suffers.
-
-Things that will bite you here:
-
-- **The fetch path must be absolute** (`/api/save`). The page is served from
-  `/admin/`, so a relative `api/save` resolves to `/admin/api/save`, which
-  Netlify does not route — and the page then quietly decides saving is
-  unavailable. There is a test for this exact mistake.
-- **The admin page holds no Supabase configuration.** `GET /api/save` hands it
-  `{supabase: {url, anonKey}}` (both public by design). Hardcoding either into
-  the page fails a test.
-- **The session token lives in one JavaScript variable.** Never localStorage,
-  sessionStorage, cookies or IndexedDB — a test greps for all four. Expiry
-  mid-edit is handled by re-login; the edited state survives in memory.
-- **Fail closed.** Any of the five required env vars unset returns 503, never
-  "allow". A valid login with the wrong email returns 403 — that is the
-  backstop against Supabase sign-ups being accidentally re-enabled.
-- The generated file is parsed with `new vm.Script(text)` before committing —
-  parse only, never executed. Don't "improve" this into `new Function(...)()`;
-  the shape is asserted in `tests/admin.test.mjs`, where running it is safe.
-- **History is best-effort.** The insert runs after the commit; if it fails the
-  response is still `saved: true` plus a warning, because the site *did*
-  publish. Never let a history failure fail a save that already happened.
-
-`tests/save.test.mjs` stubs Supabase and GitHub by URL and covers each guard.
-
-`netlify/functions/ping.mjs` hits the PostgREST root once a day
-(`schedule = "@daily"`) so the free Supabase project never pauses from
-inactivity. It touches no table and needs no policy.
-
-Where `/api/save` does not answer — a plain static host, or the folder opened
-locally — the page falls back to the copy-and-paste flow rather than showing a
-Save button that could only fail. Setup and the client-facing instructions are in
-`DEPLOY.md`.
-
-### Contact details
-
-`SITE.contact` drives every phone number and the address. All 25 WhatsApp links
-are rewritten by selector (`a[href*="wa.me/"]`) since they share one number;
-`tel:` links differ, so each carries `data-phone="<index>"` — on an `<a>` it sets
-the href, on a `<span>` the readable "78955 90063" form. Address slots come from
-`data-contact="line1|line2|city-state|street|short"`, built by `addressSlots()`
-in `js/main.js` — pure, so `tests/schedule.test.mjs` can exercise it.
-
-`addressLine2` is the only optional line, which makes empty-vs-absent load
-bearing. `addressSlots()` returns `null` when there is no `addressLine1` and the
-baked markup is left alone; past that point the address is authoritative and an
-empty string **overwrites**. Write the loop as `value !== undefined`, never
-`if (value)` — the truthy form leaves a cleared line 2 on the page beside a
-`street` slot that already dropped it, and the visitor reads two addresses.
-
-`privacy.html` and `terms.html` load **no JavaScript at all** and so are not
-reachable from `/admin/`. A test asserts their phone and address still match
-`index.html`, so a half-finished contact change cannot ship quietly.
-
-### `_headers` and `_redirects`
-
-One rule: make `js/content.js` revalidate, so a menu or price change appears
-immediately. Without it a cached copy can serve yesterday's menu for days, which
-looks exactly like the edit failed. Netlify and Cloudflare Pages read this file.
-Apache hosting would need the same rule in a root `.htaccess`; there isn't one,
-because this deploys to Netlify.
-
-`_redirects` exists because `publish = "."` serves the repository as-is, so
-`DEPLOY.md`, `CLAUDE.md`, `tests/`, `tools/`, `supabase/` and `package.json`
-would all be fetchable on the live domain. Each is 404'd explicitly. A Netlify
-splat only matches at the end of a path, so `/*.md` does not work — the root
-documents are listed one by one, and a new one needs a new line.
+- **`netlify dev` feeds edge functions from `.env` only, read once at startup.**
+  A shell override (`SUPABASE_URL=… netlify dev`) reaches `netlify/functions/*`
+  but *not* `netlify/edge-functions/*`, silently — the renderer just falls back
+  and the page looks fine. Edit `.env`, restart. Costliest gotcha here.
+- **The 30s memo is per edge instance, in isolate memory.** The response header
+  is `cache-control: public, max-age=0, must-revalidate` — no CDN or browser
+  caching at all. A longer-lived CDN copy would outlive the memo and make saves
+  look like they had not landed.
+- `_headers` holds one rule: revalidate `js/content.js`, so the outage fallback
+  is never a month stale. `/admin/*`'s `X-Robots-Tag` is in `netlify.toml`.
+- `_redirects` exists because `publish = "."` serves the repo as-is. A Netlify
+  splat only matches at the end of a path, so `/*.md` does not work — root
+  files are listed one by one and a new one needs a new line.
+- `tests/save.test.mjs` stubs Supabase by URL and throws on any other host.
+  That is what stops a second dependency creeping back in.
 
 ## Conventions
 
-- Customer-facing wording belongs in `index.html` or `js/content.js`, never in
+- Customer-facing wording lives in `index.html` or `js/content.js`, never
   `js/main.js`.
-- `index.html` carries `✏️ EDIT:` markers for the owner. Tests run against
-  comment-stripped HTML so a comment can never satisfy a content assertion.
-- Every image needs `width` and `height` (CLS is 0 and stays 0), `loading="lazy"`
+- `index.html` carries `✏️ EDIT:` markers. Tests run against comment-stripped
+  HTML, so a comment can never satisfy a content assertion.
+- Every image needs `width`/`height` (CLS is 0 and stays 0), `loading="lazy"`
   except the hero, and a real `alt`.
-- Conventional commit messages (`feat:`, `fix:`).
+- Motion is transform/opacity only. LCP is the `<h1>` at ~80 ms. One signature
+  — Today's Menu chips replaying `dish-in` 45 ms apart — everything else quiet.
+- Conventional commits (`feat:`, `fix:`).
 
-## Placeholders that must not ship as-is
+## Never
 
-README's "Before you go live" checklist is the authority. The big ones: the
-three sample reviews, placeholder photography, the `swaadsetiffin.in` domain
-(appears 15× across five files), the FSSAI registration number, and the
-approximate kitchen coordinates in the JSON-LD `geo` block.
+- **No Supabase key that bypasses RLS, anywhere.** RLS *is* the authorization:
+  `save.mjs` inserts using the owner's own token. A test greps `service_role`.
+- **Never commit a `.env`.** One is required locally for `netlify dev` and is
+  gitignored; `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `ADMIN_EMAIL` otherwise
+  live only in Netlify env vars. `GET /api/save` names the unset ones — the
+  fastest way to debug a deploy where the login never appears.
+- No second publishing route. Where `/api/save` does not answer, `/admin/` says
+  saving is unavailable rather than showing a Save button that could only fail.
+- No GitHub credential anywhere — publishing is a database insert.
 
-Nothing secret is in the repo. `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
-`ADMIN_EMAIL`, `GITHUB_TOKEN`, `GITHUB_REPO` and `GITHUB_BRANCH` are Netlify
-environment variables only — never commit them, and never add a `.env`.
-`GET /api/save` reports which are unset, which is the fastest way to debug a
-deploy where the login does not appear. The one credential class that must
-never exist anywhere is a Supabase key that bypasses RLS — a test greps for it.
+## Placeholders that must not ship
+
+README's "Before you go live" table is the authority: the three sample reviews,
+placeholder photography, the `swaadsetiffin.in` domain (15× across
+`index.html`, `sitemap.xml`, `privacy.html`, `terms.html`, `robots.txt`), the
+FSSAI number, and the approximate kitchen coordinates in the JSON-LD `geo`.
+
+Other docs: **`DEPLOY.md`** (setup + handover) · **`EDITING-GUIDE.md`** (what
+`/admin/` cannot change) · **`IMAGES.md`** (photos).

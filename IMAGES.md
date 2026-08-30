@@ -66,17 +66,15 @@ under the limit in the table above.
 browser, drag the photo in, choose **WebP** or **MozJPEG**, drag quality to about
 **75**, and check the size shown at the bottom before downloading.
 
-**If you have the command line:**
-
-```bash
-cwebp -q 78 -resize 1200 0 hero-original.jpg -o images/hero-tiffin-thali.webp
-```
+**If you have the command line** — `sips` is built into every Mac and also
+converts iPhone HEIC files:
 
 ```bash
 sips -Z 1200 -s format jpeg hero-original.heic --out images/hero-tiffin-thali.jpg
 ```
 
-(The second one is built into every Mac and also converts iPhone HEIC files.)
+For a smaller file at the same quality, `cwebp -q 78 -resize 1200 0 in.jpg -o
+out.webp` instead.
 
 ## Keep the originals
 

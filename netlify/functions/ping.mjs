@@ -1,11 +1,12 @@
 /* Keeps the free-tier Supabase project awake.
  *
  * Supabase pauses free projects after about a week without traffic, and a
- * weekly menu edit sits exactly on that line. A paused project cannot break
- * the live website — the site never reads from the database — but it would
- * greet the owner with a dead login. One tiny request a day costs nothing and
- * removes the surprise. If it ever fails anyway, DEPLOY.md documents the
- * two-minute "Restore project" path in the Supabase dashboard.
+ * weekly menu edit sits exactly on that line. A paused project cannot take the
+ * website down — the renderer falls back to the values baked into index.html —
+ * but it freezes the menu there and greets the owner with a dead login. One
+ * tiny request a day costs nothing and removes the surprise. If it ever fails
+ * anyway, DEPLOY.md documents the two-minute "Restore project" path in the
+ * Supabase dashboard.
  *
  * GET /rest/v1/ is the PostgREST root: it answers with the API description,
  * touching no table and needing no policy — the anon key alone is enough.

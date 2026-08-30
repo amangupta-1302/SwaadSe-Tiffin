@@ -3,8 +3,8 @@ images/originals/
 .impeccable/
 
 # The save function's settings live in Netlify's environment variables, never in
-# the repo. `netlify dev` reads a local .env, which would hold a real GitHub
-# token — committing that hands over write access to this repository.
+# the repo. `netlify dev` reads a local .env, which holds the Supabase project
+# URL, its anon key and the owner's email — none of them belong in git.
 .env
 .env.*
 .netlify/

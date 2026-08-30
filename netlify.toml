@@ -1,10 +1,15 @@
 # ============================================================================
 #  Netlify configuration
 # ============================================================================
-#  There is no build step. Netlify publishes the repository as-is and runs two
-#  functions: netlify/functions/save.mjs, which /admin/ calls to save changes,
-#  and netlify/functions/ping.mjs, a daily tick that keeps the free Supabase
-#  project from pausing.
+#  There is no build step. Netlify publishes the repository as-is and runs:
+#
+#    netlify/functions/save.mjs        /admin/ posts here to publish a change
+#    netlify/functions/ping.mjs        daily tick, keeps free Supabase awake
+#    netlify/edge-functions/render.js  fills each page from Supabase on the way out
+#
+#  Supabase holds the live menu, prices and contact details; the edge function
+#  reads the latest row and writes it into the HTML before the visitor gets it.
+#  The values baked into index.html are the fallback if that read ever fails.
 #
 #  Required environment variables — set these in the Netlify UI under
 #  Site configuration → Environment variables, never in this file:
@@ -12,9 +17,9 @@
 #    SUPABASE_URL        the project URL, e.g. https://abcdefgh.supabase.co
 #    SUPABASE_ANON_KEY   the project's public (anon) API key
 #    ADMIN_EMAIL         the one account allowed to save changes
-#    GITHUB_TOKEN        fine-grained token, Contents: read+write, this repo only
-#    GITHUB_REPO         owner/repository, e.g. amann/swaadse-tiffin
-#    GITHUB_BRANCH       optional, defaults to main
+#
+#  All three are read by both functions and the edge function. Publishing is a
+#  database insert, so nothing here needs write access to the repository.
 #
 #  Full walkthrough: DEPLOY.md
 # ============================================================================

@@ -2,17 +2,18 @@
  *  /api/save — the only thing in this project that can change the website.
  * ============================================================================
  *
- *  WHY THIS EXISTS
- *  The site is static, so nothing in the browser can write a file. This runs on
- *  Netlify instead: it checks who is asking, checks the menu, and commits
- *  js/content.js to GitHub. Netlify sees the commit and redeploys, so the change
- *  is live about a minute later without anyone touching a file manager.
+ *  The site is static, so nothing in the browser can write anything. This runs
+ *  on Netlify instead: it checks who is asking, checks the menu, and appends
+ *  the new state to Supabase. netlify/edge-functions/render.js serves the
+ *  latest row, so the change is live within seconds and no deploy happens.
  *
- *  WHY THE RULES ARE NOT REPEATED HERE
- *  validate() and generate() are imported from admin/generate.js — the same
- *  functions the admin page uses and tests/admin.test.mjs covers. A second copy
- *  of "what a valid price is" would drift from the tested one, and the drift
- *  would only show up as a broken live site.
+ *  THE INSERT IS THE PUBLISH. Nothing else publishes, so a refused insert is a
+ *  failed save and must be reported as one — returning `saved: true` with a
+ *  warning would claim success for an edit that never reached the website.
+ *
+ *  validate() is imported from admin/generate.js rather than restated here:
+ *  one copy of "what a valid price is", shared with the page that shows the
+ *  errors and the tests that cover them.
  *
  *  THE SECURITY MODEL
  *  This endpoint is the guard, not the page. /admin/ holds no secrets and is
@@ -24,22 +25,14 @@
  *    - only the one account named in ADMIN_EMAIL may write, so accidentally
  *      re-enabled sign-ups grant nothing
  *    - missing settings mean saving is refused outright, never left open
- *    - FILE_PATH is a constant: no request can choose what file to write
- *    - the generated file is parsed before committing, so a syntax error
- *      can never reach the live site
- *    - there is no all-powerful database key anywhere: the edit-history insert
- *      uses the owner's own token, and row-level security keeps it append-only
+ *    - there is no all-powerful database key anywhere: the insert uses the
+ *      owner's own token, and row-level security keeps the table append-only
  *
  *  Setup and required environment variables: see DEPLOY.md.
  * ========================================================================== */
-import { Buffer } from 'node:buffer';
-import { Script } from 'node:vm';
 
 // Side-effect import: sets globalThis.SwaadSeAdmin = { validate, generate, … }
 import '../../admin/generate.js';
-
-/** The one and only file this endpoint may write. Never taken from a request. */
-const FILE_PATH = 'js/content.js';
 
 export const config = { path: '/api/save' };
 
@@ -47,17 +40,13 @@ const json = (status, body) =>
   Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
 
 function settings() {
-  const { SUPABASE_URL, SUPABASE_ANON_KEY, ADMIN_EMAIL,
-          GITHUB_TOKEN, GITHUB_REPO, GITHUB_BRANCH } = process.env;
+  const { SUPABASE_URL, SUPABASE_ANON_KEY, ADMIN_EMAIL } = process.env;
   return {
     supabaseUrl: (SUPABASE_URL || '').replace(/\/+$/, ''),
     anonKey: SUPABASE_ANON_KEY,
     adminEmail: ADMIN_EMAIL,
-    token: GITHUB_TOKEN,
-    repo: GITHUB_REPO,
-    branch: GITHUB_BRANCH || 'main',
     // Names only — never the values.
-    missing: Object.entries({ SUPABASE_URL, SUPABASE_ANON_KEY, ADMIN_EMAIL, GITHUB_TOKEN, GITHUB_REPO })
+    missing: Object.entries({ SUPABASE_URL, SUPABASE_ANON_KEY, ADMIN_EMAIL })
       .filter(([, value]) => !value)
       .map(([name]) => name),
   };
@@ -104,61 +93,18 @@ async function verifyUser({ supabaseUrl, anonKey, adminEmail }, authHeader) {
 }
 
 /**
- * Write the file through the GitHub Contents API.
+ * Publish the new state by appending it to Supabase.
  *
- * GitHub needs the sha of the copy being replaced. Sending a stale one gets a
- * 409, which is exactly the protection we want if two people save at once — so
- * it is re-read and retried once rather than blindly forced.
+ * The insert uses the owner's own session token, so row-level security is the
+ * authorization and no key that could bypass it exists anywhere in the system.
+ * The table has no update or delete policy, so every save is a new row and the
+ * whole edit history stays recoverable.
  *
- * @returns {Promise<{ok: boolean, status: number, detail: string, commit?: string}>}
+ * A failure here means nothing reached the website.
+ *
+ * @returns {Promise<{ok: boolean, detail?: string}>}
  */
-async function commitFile({ token, repo, branch }, text, message) {
-  const url = `https://api.github.com/repos/${repo}/contents/${FILE_PATH}`;
-  const headers = {
-    authorization: `Bearer ${token}`,
-    accept: 'application/vnd.github+json',
-    'x-github-api-version': '2022-11-28',
-    'user-agent': 'swaadse-tiffin-admin',
-  };
-
-  const attempt = async () => {
-    const head = await fetch(`${url}?ref=${encodeURIComponent(branch)}`, { headers });
-    if (!head.ok && head.status !== 404) {
-      return { ok: false, status: 502, detail: `GitHub would not let us read the file (${head.status}).` };
-    }
-    const sha = head.ok ? (await head.json()).sha : undefined;
-
-    const put = await fetch(url, {
-      method: 'PUT',
-      headers: { ...headers, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        message,
-        content: Buffer.from(text, 'utf8').toString('base64'),
-        branch,
-        ...(sha ? { sha } : {}),
-      }),
-    });
-
-    if (put.ok) {
-      const saved = await put.json();
-      return { ok: true, status: 200, detail: 'saved', commit: saved.commit?.html_url };
-    }
-    return { ok: false, status: put.status, detail: await put.text() };
-  };
-
-  let result = await attempt();
-  if (!result.ok && result.status === 409) result = await attempt();
-  return result;
-}
-
-/**
- * Append this save to the edit history in Supabase. Runs after the commit and
- * uses the owner's own token — row-level security is the authorization, so no
- * key that could bypass it exists anywhere in the system. The site has already
- * published by the time this runs, so a failure here is reported as a warning,
- * never as a failed save.
- */
-async function recordHistory({ supabaseUrl, anonKey }, token, user, state, commitUrl) {
+async function publish({ supabaseUrl, anonKey }, token, user, state) {
   try {
     const res = await fetch(`${supabaseUrl}/rest/v1/site_state`, {
       method: 'POST',
@@ -168,11 +114,12 @@ async function recordHistory({ supabaseUrl, anonKey }, token, user, state, commi
         'content-type': 'application/json',
         prefer: 'return=minimal',
       },
-      body: JSON.stringify({ state, saved_by: user.id, commit_url: commitUrl ?? null }),
+      body: JSON.stringify({ state, saved_by: user.id }),
     });
-    return res.ok;
-  } catch {
-    return false;
+    if (res.ok) return { ok: true };
+    return { ok: false, detail: (await res.text()).slice(0, 300) };
+  } catch (error) {
+    return { ok: false, detail: String(error?.message || error).slice(0, 300) };
   }
 }
 
@@ -225,7 +172,7 @@ export default async (request) => {
 
   // The same checks the admin page shows, enforced again here — a request can
   // reach this endpoint without going through that page at all.
-  const { validate, generate } = globalThis.SwaadSeAdmin;
+  const { validate } = globalThis.SwaadSeAdmin;
   let blocking;
   try {
     // validate() reads shapes the admin page can never produce — a null day, a
@@ -240,54 +187,18 @@ export default async (request) => {
     return json(400, { error: 'Nothing was changed, because of this:', issues: blocking });
   }
 
-  let text;
-  try {
-    text = generate(state);
-  } catch {
-    return json(500, { error: 'Could not build the file. Nothing was changed.' });
-  }
-
-  /* Parse the result without running it. A SyntaxError here means we were about
-     to commit a file that would stop the live menu loading, leaving the site on
-     the stale prices baked into index.html — a silent failure, so it is worth a
-     check on the way past.
-
-     new vm.Script() parses and throws on bad syntax; running it would take a
-     deliberate .runInNewContext() call, which is the point. `new Function(…)`
-     would do the same job but becomes arbitrary code execution the moment
-     someone appends "()" to it, and the obvious next feature request — "also
-     check the shape came out right" — invites exactly that edit. The shape is
-     asserted in tests/admin.test.mjs instead, where executing it is safe. */
-  try {
-    new Script(text);
-  } catch {
-    return json(500, { error: 'Refused to save: the file did not come out valid. Nothing was changed.' });
-  }
-
-  const result = await commitFile(setup, text, 'content: menu update from /admin/');
+  const result = await publish(setup, auth.token, auth.user, state);
   if (!result.ok) {
-    return json(result.status === 409 ? 409 : 502, {
-      error: result.status === 409
-        ? 'Somebody else saved a moment ago. Refresh the page and make your change again.'
-        : 'Could not save to GitHub. Nothing was changed.',
-      detail: result.detail?.slice(0, 300),
+    // Nothing was written anywhere, so say so plainly. The owner's edits are
+    // still in the page and pressing Save again is the whole retry.
+    return json(502, {
+      error: 'Could not save to the database. Nothing was changed — try again in a minute.',
+      detail: result.detail,
     });
   }
 
-  // The commit has landed and the site is already publishing, so nothing below
-  // may hold up the answer. A slow or waking Supabase gives up after 3 seconds
-  // and the save is reported exactly as it would be if the insert had failed.
-  let giveUp;
-  const historyRecorded = await Promise.race([
-    recordHistory(setup, auth.token, auth.user, state, result.commit),
-    new Promise(resolve => { giveUp = setTimeout(() => resolve(false), 3000); }),
-  ]);
-  clearTimeout(giveUp);   // or a fast insert leaves the timer holding the runtime open
-
   return json(200, {
     saved: true,
-    message: 'Saved. Your website will show the change in about a minute.',
-    commit: result.commit,
-    ...(historyRecorded ? {} : { warning: 'Saved, but this edit could not be added to the history log.' }),
+    message: 'Saved. Your website will show the change within a minute.',
   });
 };

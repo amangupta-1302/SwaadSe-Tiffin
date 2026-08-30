@@ -330,7 +330,7 @@ test('a price and the WhatsApp message quoting it never disagree', () => {
 test('the prices Google reads match the prices on the page', () => {
   // These three are read by search engines and social previews from the served
   // HTML, before any JavaScript runs, so they cannot be filled in from
-  // content.js. They are listed in EDITING-GUIDE section 4 as a manual step.
+  // content.js. They are listed in EDITING-GUIDE section 2 as a manual step.
   const baked = new Map(taggedPrices().map(p => [p.key, p.amount]));
   const planPrices = [...baked].filter(([k]) => k.startsWith('plan-')).map(([, v]) => v);
 
@@ -404,6 +404,20 @@ test('every address slot the page asks for is one main.js can fill', async () =>
   for (const slot of known)
     assert.ok(main.includes(`'${slot}'`) || main.includes(`${slot},`) || main.includes(`${slot}:`),
       `js/main.js no longer produces address slot "${slot}"`);
+});
+
+test('a cleared address line overwrites the page rather than being skipped', () => {
+  // validate() does not require addressLine2, so the owner may legitimately
+  // empty it. If the [data-contact] loop tested truthiness, '' would be skipped
+  // and the baked "Kamla Nagar" would stay on the page beside a street slot
+  // that had already dropped it — two addresses, one screen, nothing to see.
+  // addressSlots() returning '' is covered in tests/schedule.test.mjs; the
+  // write itself needs a DOM, so the guard is pinned here instead.
+  const main = read('js/main.js');
+  const loop = main.match(/for \(const el of \$\$\('\[data-contact\]'\)\)[\s\S]{0,200}/);
+  assert.ok(loop, 'js/main.js no longer writes address slots');
+  assert.match(loop[0], /value !== undefined/,
+    'the address write must tell a cleared line from a missing one, not test truthiness');
 });
 
 test('the legal pages carry the same phone number and address as the front page', () => {

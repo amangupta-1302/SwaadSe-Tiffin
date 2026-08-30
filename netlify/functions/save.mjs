@@ -80,7 +80,14 @@ async function verifyUser({ supabaseUrl, anonKey, adminEmail }, authHeader) {
     const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: { apikey: anonKey, authorization: `Bearer ${token}` },
     });
+    // Only Supabase saying "no" means the session is finished. Anything else —
+    // the free project waking up, a rate limit, a gateway blip — is a service
+    // problem, and answering 401 would make /admin/ throw away a token that is
+    // still perfectly good and demand the password again mid-edit.
     if (!res.ok) {
+      if (res.status !== 401 && res.status !== 403) {
+        return { ok: false, status: 502, error: 'The login service is having trouble. Nothing was changed — try again in a minute.' };
+      }
       return { ok: false, status: 401, error: 'Your login has expired. Log in and press Save again.' };
     }
     user = await res.json();
@@ -219,7 +226,16 @@ export default async (request) => {
   // The same checks the admin page shows, enforced again here — a request can
   // reach this endpoint without going through that page at all.
   const { validate, generate } = globalThis.SwaadSeAdmin;
-  const blocking = validate(state).filter(([kind]) => kind === 'error').map(([, message]) => message);
+  let blocking;
+  try {
+    // validate() reads shapes the admin page can never produce — a null day, a
+    // null delivery window — and a request does not have to come from that page.
+    // Left unguarded it throws, and Netlify answers with a bodyless 500 that
+    // /admin/ can only render as "(500)".
+    blocking = validate(state).filter(([kind]) => kind === 'error').map(([, message]) => message);
+  } catch {
+    return json(400, { error: 'That menu data is not in a shape this website understands. Nothing was changed.' });
+  }
   if (blocking.length) {
     return json(400, { error: 'Nothing was changed, because of this:', issues: blocking });
   }
@@ -258,7 +274,15 @@ export default async (request) => {
     });
   }
 
-  const historyRecorded = await recordHistory(setup, auth.token, auth.user, state, result.commit);
+  // The commit has landed and the site is already publishing, so nothing below
+  // may hold up the answer. A slow or waking Supabase gives up after 3 seconds
+  // and the save is reported exactly as it would be if the insert had failed.
+  let giveUp;
+  const historyRecorded = await Promise.race([
+    recordHistory(setup, auth.token, auth.user, state, result.commit),
+    new Promise(resolve => { giveUp = setTimeout(() => resolve(false), 3000); }),
+  ]);
+  clearTimeout(giveUp);   // or a fast insert leaves the timer holding the runtime open
 
   return json(200, {
     saved: true,

@@ -171,7 +171,7 @@
       <p class="issue issue--warn" style="margin-top:1rem">
         Three places quote prices to Google rather than to visitors, and they are not updated from here:
         the search-result description, the sharing preview, and the price range in the business listing.
-        After changing a price, ask your developer to update those — or see EDITING-GUIDE section 4.
+        After changing a price, ask your developer to update those — or see EDITING-GUIDE section 2.
       </p>
     </section>
 
@@ -183,7 +183,8 @@
       <div id="contact"></div>
       <p class="issue issue--warn" style="margin-top:1rem">
         Your address and main number are also written into the data Google reads for your business listing,
-        and into the map link. Those are not updated from here — see EDITING-GUIDE section 5 after you change them.
+        into the map link, and into the Privacy and Terms pages. Those four are not updated from here —
+        see EDITING-GUIDE section 5 after you change them.
       </p>
     </section>
 
@@ -851,18 +852,23 @@
     status('warn', 'Saving…');
 
     try {
+      // Only the Save button is disabled while this is in flight, so the boxes
+      // can still change. What gets remembered as published has to be the copy
+      // that was actually posted, or a correction typed during the wait is
+      // marked saved without ever reaching the website.
+      const sent = clone(state);
       const response = await fetch('/api/save', {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
           authorization: `Bearer ${session.token}`,
         },
-        body: JSON.stringify({ state }),
+        body: JSON.stringify({ state: sent }),
       });
       const info = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        loaded = clone(state);
+        loaded = sent;
         $('savebar').hidden = true;
         status(info.warning ? 'warn' : 'ok',
           [info.message || 'Saved. The website will update in about a minute.', info.warning]
@@ -891,7 +897,19 @@
   $('login').addEventListener('submit', login);
   $('recovery').addEventListener('submit', finishRecovery);
   $('forgot').addEventListener('click', forgotPassword);
-  $('logout').addEventListener('click', () => { showLogin(); toast('Logged out.'); });
+  $('logout').addEventListener('click', () => {
+    // Forgetting the token here still leaves it usable by anyone who captured
+    // it. Ask Supabase to end the session too — best effort, since logging out
+    // of this page must succeed either way.
+    if (session) {
+      fetch(`${supabase.url}/auth/v1/logout`, {
+        method: 'POST',
+        headers: { ...sbHeaders(), authorization: `Bearer ${session.token}` },
+      }).catch(() => {});
+    }
+    showLogin();
+    toast('Logged out.');
+  });
   $('savebar-btn').addEventListener('click', () => {
     // Saves directly when it can; otherwise brings the Save panel (login or
     // copy-and-paste instructions) into view.

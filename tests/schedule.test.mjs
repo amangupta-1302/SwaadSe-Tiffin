@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 
 globalThis.window = globalThis;          // main.js reads globalThis.SITE
 await import('../js/main.js');           // no document in Node, so DOM work is skipped
-const { nextDelivery, menuIndexFor, isDeliveryDay } = globalThis.SwaadSeSchedule;
+const { nextDelivery, menuIndexFor, isDeliveryDay, addressSlots } = globalThis.SwaadSeSchedule;
 
 const WINDOWS = [
   { label: '7:00 – 9:00 AM', startHour: 7, endHour: 9 },
@@ -116,4 +116,68 @@ test('menuIndexFor never returns an index outside the seven-day menu', () => {
     const index = menuIndexFor(aug(day, 9));
     assert.ok(index >= 0 && index <= 6, `Aug ${day} produced index ${index}`);
   }
+});
+
+// ─── delivery windows arrive in whatever order the owner added them ──────────
+test('an out-of-order window list still advertises the earliest slot', () => {
+  // /admin/ appends a new window to the end of the list, and validate() checks
+  // each window on its own but never their order. A midday slot added after the
+  // evening one used to make the page skip straight to "4:00 – 5:00 PM".
+  const jumbled = [
+    { label: '7:00 – 9:00 AM', startHour: 7, endHour: 9 },
+    { label: '4:00 – 5:00 PM', startHour: 16, endHour: 17 },
+    { label: '12:00 – 1:00 PM', startHour: 12, endHour: 13 },
+  ];
+
+  assert.deepEqual(nextDelivery(aug(3, 6, 0), jumbled),
+    { when: 'Today', label: '7:00 – 9:00 AM' }, 'before opening, the morning slot is next');
+  assert.deepEqual(nextDelivery(aug(3, 11, 0), jumbled),
+    { when: 'Today', label: '12:00 – 1:00 PM' }, 'the midday slot must not be skipped');
+  assert.deepEqual(nextDelivery(aug(3, 14, 0), jumbled),
+    { when: 'Today', label: '4:00 – 5:00 PM' }, 'after midday closes, the evening slot is next');
+  // Tomorrow means the first delivery of tomorrow, not windows[0].
+  assert.deepEqual(nextDelivery(aug(3, 20, 0), jumbled),
+    { when: 'Tomorrow', label: '7:00 – 9:00 AM' });
+});
+
+test('sorting the windows does not reorder the caller\'s array', () => {
+  const windows = [
+    { label: 'evening', startHour: 16, endHour: 17 },
+    { label: 'morning', startHour: 7, endHour: 9 },
+  ];
+  nextDelivery(aug(3, 6), windows);
+  assert.equal(windows[0].label, 'evening', 'content.js order must survive untouched');
+});
+
+// ─── address: a cleared optional line is an edit, not a missing value ────────
+test('clearing address line 2 blanks its slots instead of keeping stale text', () => {
+  // validate() requires line 1, city and PIN but not line 2, so emptying it is
+  // a legal owner edit. Treating '' as "unset" left the old line 2 on the page
+  // beside a street slot that had already dropped it — two addresses, one page.
+  const slots = addressSlots({
+    addressLine1: '37/1 Om Vihar', addressLine2: '', city: 'Agra', statePin: 'Uttar Pradesh 282005',
+  });
+  assert.equal(slots.line2, '', 'line 2 must be blanked, not left undefined');
+  assert.equal(slots.street, '37/1 Om Vihar', 'street must not carry the cleared line');
+  assert.equal(slots.short, '37/1 Om Vihar, Agra');
+  assert.equal(slots['city-state'], 'Agra, Uttar Pradesh 282005');
+});
+
+test('a filled address produces every slot index.html asks for', () => {
+  const slots = addressSlots({
+    addressLine1: '37/1 Om Vihar', addressLine2: 'Kamla Nagar', city: 'Agra', statePin: 'Uttar Pradesh 282005',
+  });
+  assert.deepEqual(slots, {
+    line1: '37/1 Om Vihar',
+    line2: 'Kamla Nagar',
+    'city-state': 'Agra, Uttar Pradesh 282005',
+    street: '37/1 Om Vihar, Kamla Nagar',
+    short: '37/1 Om Vihar, Kamla Nagar, Agra',
+  });
+});
+
+test('no address at all leaves the baked markup alone', () => {
+  // null is the signal main.js uses to skip the [data-contact] loop entirely.
+  for (const contact of [{}, undefined, { addressLine1: '   ' }, { city: 'Agra' }])
+    assert.equal(addressSlots(contact), null, `${JSON.stringify(contact)} should not overwrite the page`);
 });

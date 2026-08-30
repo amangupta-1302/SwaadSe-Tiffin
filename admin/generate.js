@@ -150,14 +150,14 @@
         issues.push(['error', `There must be ${PHONE_COUNT} phone numbers.`]);
       } else {
         phones.forEach((raw, i) => {
-          const digits = String(raw || '').replace(/\D/g, '');
-          if (!digits)
+          const only = digits(raw);
+          if (!only)
             issues.push(['error', `Phone number ${i + 1} is empty. Every box must have a number in it.`]);
-          else if (!/^[6-9]\d{9}$/.test(digits))
+          else if (!/^[6-9]\d{9}$/.test(only))
             issues.push(['error', `Phone number ${i + 1} (“${raw}”) is not a 10-digit Indian mobile number. ` +
               `Write the 10 digits only, with no +91 and no spaces.`]);
         });
-        const seen = phones.map(p => String(p).replace(/\D/g, '')).filter(Boolean);
+        const seen = phones.map(digits).filter(Boolean);
         if (new Set(seen).size !== seen.length)
           issues.push(['warn', 'The same phone number is listed more than once.']);
         if (seen[0] && !wa.endsWith(seen[0]))

@@ -179,7 +179,7 @@ across five files.
 
 ## Local development
 
-`python3 -m http.server 4173` serves the site but has no `/api/save`, so
+`python3 -m http.server 8080` serves the site but has no `/api/save`, so
 `/admin/` shows the copy-and-paste route. That is correct behaviour, not a bug.
 
 To exercise the real login and Save button, install the Netlify CLI and run

@@ -21,7 +21,7 @@ supabase-js, neither from a CDN nor vendored.
 npm test                                            # full suite, ~1s, must end "fail 0"
 node --test tests/save.test.mjs                     # one file
 node --test --test-name-pattern "…" "tests/*.test.mjs"   # one test by name
-npm run serve                                       # python3 -m http.server 4173 (no /api/save)
+npm run serve                                       # python3 -m http.server 8080 (no /api/save)
 netlify dev                                         # …with the save function, if the CLI is installed
 node tools/make-placeholders.mjs                    # regenerate placeholder images
 node tools/make-og-image.mjs                        # regenerate the OG share card
@@ -202,19 +202,33 @@ Save button that could only fail. Setup and the client-facing instructions are i
 are rewritten by selector (`a[href*="wa.me/"]`) since they share one number;
 `tel:` links differ, so each carries `data-phone="<index>"` — on an `<a>` it sets
 the href, on a `<span>` the readable "78955 90063" form. Address slots come from
-`data-contact="line1|line2|city|city-state|street|short"`.
+`data-contact="line1|line2|city-state|street|short"`, built by `addressSlots()`
+in `js/main.js` — pure, so `tests/schedule.test.mjs` can exercise it.
+
+`addressLine2` is the only optional line, which makes empty-vs-absent load
+bearing. `addressSlots()` returns `null` when there is no `addressLine1` and the
+baked markup is left alone; past that point the address is authoritative and an
+empty string **overwrites**. Write the loop as `value !== undefined`, never
+`if (value)` — the truthy form leaves a cleared line 2 on the page beside a
+`street` slot that already dropped it, and the visitor reads two addresses.
 
 `privacy.html` and `terms.html` load **no JavaScript at all** and so are not
 reachable from `/admin/`. A test asserts their phone and address still match
 `index.html`, so a half-finished contact change cannot ship quietly.
 
-### `_headers`
+### `_headers` and `_redirects`
 
 One rule: make `js/content.js` revalidate, so a menu or price change appears
 immediately. Without it a cached copy can serve yesterday's menu for days, which
 looks exactly like the edit failed. Netlify and Cloudflare Pages read this file.
 Apache hosting would need the same rule in a root `.htaccess`; there isn't one,
 because this deploys to Netlify.
+
+`_redirects` exists because `publish = "."` serves the repository as-is, so
+`DEPLOY.md`, `CLAUDE.md`, `tests/`, `tools/`, `supabase/` and `package.json`
+would all be fetchable on the live domain. Each is 404'd explicitly. A Netlify
+splat only matches at the end of a path, so `/*.md` does not work — the root
+documents are listed one by one, and a new one needs a new line.
 
 ## Conventions
 

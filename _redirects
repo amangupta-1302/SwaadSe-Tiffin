@@ -1,0 +1,21 @@
+# Nothing listed here is part of the customer-facing site. netlify.toml sets
+# publish = "." — Netlify serves the repository as-is, with no build step — so
+# the developer files sitting beside index.html would otherwise be fetchable on
+# the live domain. DEPLOY.md in particular names the GitHub repository and every
+# environment variable the save function needs.
+#
+# 404! forces the rule even when the file exists. There is no 404.html, so
+# Netlify serves its own not-found page, which is the intent.
+#
+# A splat only matches at the end of a path on Netlify, so "/*.md" would not
+# work — the five root documents are listed one by one.
+/tests/*           /404.html  404!
+/tools/*           /404.html  404!
+/supabase/*        /404.html  404!
+/CLAUDE.md         /404.html  404!
+/DEPLOY.md         /404.html  404!
+/EDITING-GUIDE.md  /404.html  404!
+/IMAGES.md         /404.html  404!
+/README.md         /404.html  404!
+/package.json      /404.html  404!
+/deno.lock         /404.html  404!

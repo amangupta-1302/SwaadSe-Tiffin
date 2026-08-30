@@ -279,3 +279,42 @@ test('a GitHub outage reports failure instead of claiming success', async () => 
   assert.equal(res.status, 502);
   assert.match((await res.json()).error, /Nothing was changed/);
 });
+
+// ─── a bad request must still answer in JSON ─────────────────────────────────
+test('a Supabase outage is not reported as a dead login', async () => {
+  // /admin/ throws the session away on a 401, so answering 401 for a service
+  // failure makes the owner re-enter their password for a token that is fine.
+  for (const status of [500, 502, 503]) {
+    stubNetwork({ authStatus: status });
+    const res = await post({ state: goodState() });
+    assert.equal(res.status, 502, `Supabase ${status} must not read as "logged out"`);
+    assert.match((await res.json()).error, /try again/i);
+    assert.equal(githubCalls().length, 0, 'nothing may reach GitHub');
+  }
+
+  // A genuine refusal still ends the session.
+  for (const status of [401, 403]) {
+    stubNetwork({ authStatus: status });
+    assert.equal((await post({ state: goodState() })).status, 401);
+  }
+});
+
+test('menu data of the wrong shape is refused with a reason, not a bare 500', async () => {
+  // validate() reads entry.closed and win.label directly. A request does not
+  // have to come from /admin/, and an unguarded throw here becomes a bodyless
+  // Netlify 500 that the editor can only show as "(500)".
+  const shapes = [
+    { ...goodState(), weeklyMenu: [null, null, null, null, null, null, null] },
+    { ...goodState(), deliveryWindows: [null] },
+    { ...goodState(), weeklyMenu: ['Monday', 'Tuesday'] },
+    { ...goodState(), contact: null },
+    { ...goodState(), prices: null },
+  ];
+
+  for (const state of shapes) {
+    const res = await post({ state });
+    assert.ok(res.status === 400, `expected 400, got ${res.status} for ${JSON.stringify(state).slice(0, 60)}…`);
+    assert.ok((await res.json()).error, 'a refusal must carry a readable reason');
+    assert.equal(githubCalls().length, 0, 'a malformed menu must never reach the repo');
+  }
+});

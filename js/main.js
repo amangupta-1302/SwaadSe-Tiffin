@@ -38,18 +38,22 @@
    */
   function nextDelivery(now, windows) {
     if (!Array.isArray(windows) || !windows.length) return null;
+    // /admin/ appends a new window to the end of the list, and validate() has no
+    // opinion about the order, so the earliest one has to be worked out rather
+    // than assumed. Sorting a copy leaves the caller's array untouched.
+    const ordered = [...windows].sort((a, b) => a.startHour - b.startHour);
     const minutes = now.getHours() * 60 + now.getMinutes();
     const today = now.getDay();
 
     if (isDeliveryDay(today)) {
       // A window is still reachable until the moment it closes.
-      const upcoming = windows.find(w => minutes < w.endHour * 60);
+      const upcoming = ordered.find(w => minutes < w.endHour * 60);
       if (upcoming) return { when: 'Today', label: upcoming.label };
     }
     for (let ahead = 1; ahead <= 7; ahead++) {
       const day = (today + ahead) % 7;
       if (!isDeliveryDay(day)) continue;           // skip Sunday
-      return { when: ahead === 1 ? 'Tomorrow' : DAY_NAMES[day], label: windows[0].label };
+      return { when: ahead === 1 ? 'Tomorrow' : DAY_NAMES[day], label: ordered[0].label };
     }
     return null;
   }
@@ -61,9 +65,36 @@
    */
   const menuIndexFor = date => (date.getDay() + 6) % 7;
 
+  /**
+   * The five address slots index.html asks for, or null when content.js holds
+   * no real address and the baked markup should be left alone.
+   *
+   * A cleared optional line is not the same as a missing one. Once
+   * addressLine1 is set the whole address is authoritative, so an emptied
+   * line 2 has to blank its slots — otherwise the page shows last week's
+   * "Kamla Nagar" next to a street slot that has already dropped it.
+   *
+   * @param {object} contact  SITE.contact
+   * @returns {{line1: string, line2: string, 'city-state': string, street: string, short: string}|null}
+   */
+  function addressSlots(contact) {
+    const text = key => String((contact && contact[key]) || '').trim();
+    const line1 = text('addressLine1');
+    if (!line1) return null;
+    const line2 = text('addressLine2');
+    const city = text('city');
+    return {
+      line1,
+      line2,
+      'city-state': [city, text('statePin')].filter(Boolean).join(', '),
+      street: [line1, line2].filter(Boolean).join(', '),
+      short: [line1, line2, city].filter(Boolean).join(', '),
+    };
+  }
+
   // Exposed so tests/schedule.test.mjs can import this file in Node. Assigning
   // to globalThis is a no-op cost in the browser.
-  globalThis.SwaadSeSchedule = { nextDelivery, menuIndexFor, isDeliveryDay, DAY_NAMES };
+  globalThis.SwaadSeSchedule = { nextDelivery, menuIndexFor, isDeliveryDay, DAY_NAMES, addressSlots };
 
   // Under the test runner there is no document; the pure logic above is all the
   // test needs, so stop here.
@@ -155,20 +186,12 @@
       else el.textContent = number.length === 10 ? `${number.slice(0, 5)} ${number.slice(5)}` : number;
     }
 
-    const line1 = String(contact.addressLine1 || '').trim();
-    const line2 = String(contact.addressLine2 || '').trim();
-    const city = String(contact.city || '').trim();
-    const statePin = String(contact.statePin || '').trim();
-    const address = {
-      line1,
-      line2,
-      'city-state': [city, statePin].filter(Boolean).join(', '),
-      street: [line1, line2].filter(Boolean).join(', '),
-      short: [line1, line2, city].filter(Boolean).join(', '),
-    };
-    for (const el of $$('[data-contact]')) {
+    // null means content.js has no address worth trusting — leave every baked
+    // line alone, the same rule prices and phone numbers follow.
+    const address = addressSlots(contact);
+    if (address) for (const el of $$('[data-contact]')) {
       const value = address[el.dataset.contact];
-      if (value) el.textContent = value;
+      if (value !== undefined) el.textContent = value;
     }
   }
 

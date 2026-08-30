@@ -32,7 +32,7 @@ Docs: **`DEPLOY.md`** (Netlify + Supabase setup, env vars, client handover),
 ## Run it locally
 
 ```bash
-npm run serve            # page only, http://localhost:4173 — no saving
+npm run serve            # page only, http://localhost:8080 — no saving
 npx -y netlify-cli dev   # the whole app incl. /api/save, http://localhost:8888
 ```
 

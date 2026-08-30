@@ -2,32 +2,28 @@
  *  ✏️  THIS IS THE FILE YOU EDIT EVERY WEEK
  * ============================================================================
  *
- *  Everything below controls Today's Special and the weekly menu on the website.
- *  You do NOT need to touch any other file to change the menu.
+ *  Easiest way to change anything here: open /admin/ on your website, edit the
+ *  form, and press Copy. It writes this file for you.
  *
- *  HOW TO EDIT — three rules, that is all:
+ *  To edit by hand instead — three rules, that is all:
  *
  *    1. Only change the words BETWEEN the quote marks "like this".
  *    2. Never delete a quote mark " a comma , a bracket [ ] or a brace { }.
  *    3. Save the file, upload it, then refresh the website.
  *
- *  Example — changing Monday's food:
+ *  HOW TO EDIT — example, changing Monday's food:
  *
  *      BEFORE:   items: ["Dal Tadka", "Mix Veg", "Rice", "4 Tawa Roti"]
  *      AFTER:    items: ["Kadhi", "Bhindi Masala", "Rice", "4 Tawa Roti"]
  *
- *  You can list as many or as few dishes as you like on any day.
- *
- *  If the site ever shows the wrong thing after an edit, it is almost always a
- *  missing quote mark or a missing comma. Compare your line against the ones
- *  around it — they all follow the same shape.
+ *  If the site shows the wrong thing after an edit, it is almost always a
+ *  missing quote mark or comma. Compare your line with the ones around it.
  * ========================================================================== */
 
 window.SITE = {
 
   /* ── Today's special ───────────────────────────────────────────────────────
-     Shown in the box near the top of the page. Change it every morning.
-     Keep it short — one line reads best on a phone.                         */
+     Shown in the box near the top of the page. Change it every morning.       */
   todaysSpecial: "Dal Tadka · Mix Veg · Jeera Rice · 4 Tawa Roti",
 
   /* ── The weekly menu ───────────────────────────────────────────────────────
@@ -86,34 +82,31 @@ window.SITE = {
   ],
 
   /* ── Prices ────────────────────────────────────────────────────────────────
-     Every price on the website, in rupees.
-
-     Write the NUMBER ONLY. No ₹ sign, no comma, no quote marks:
+     Every price on the website, in rupees. Write the NUMBER ONLY — no ₹ sign,
+     no comma, no quote marks:
 
          "plan-basic": 80          ✅ correct
          "plan-basic": "₹80"       ❌ wrong — the website will show nothing
          "plan-basic": 1,200       ❌ wrong — write 1200
 
-     Changing a number here changes it everywhere on the website at once:
-     the price on the card AND the price inside the WhatsApp message the
-     customer sends you. You never have to change the same price twice.
+     Changing a number here changes it everywhere at once: the price on the
+     card AND the price inside the WhatsApp message the customer sends you.
 
      Do not rename the words on the left. The website finds each price by
      that exact name.                                                        */
   prices: {
-
-    /* The four tiffin plans — price per meal */
+    /* Meal plans */
     "plan-basic": 80,
     "plan-standard": 120,
     "plan-premium": 150,
     "plan-deluxe": 170,
 
-    /* Monthly subscription band */
+    /* Monthly subscription */
     "tier-lunch-dinner": 4600,
     "tier-one-meal": 2400,
     "tier-single": 80,
 
-    /* Food packs, ordered on their own */
+    /* Food packs */
     "pack-dal": 180,
     "pack-rice": 140,
     "pack-roti": 80,
@@ -128,24 +121,11 @@ window.SITE = {
      Changing a number here changes it everywhere on the website: every Call
      button, every WhatsApp button, the contact section and the footer.
 
-     Write phone numbers as 10 digits with NO spaces, no +91, no dashes:
-
-         "7895590063"      ✅ correct
-         "78955 90063"     ❌ wrong
-         "+91 78955 90063" ❌ wrong
-
-     The website adds the +91 and the space itself.                          */
+     Phone numbers are 10 digits with NO spaces, no +91, no dashes. The
+     WhatsApp number keeps the 91 in front, because WhatsApp needs it.       */
   contact: {
-
-    /* The number that receives WhatsApp messages. This one keeps the 91 in
-       front, because WhatsApp needs the country code. */
     whatsapp: "917895590063",
-
-    /* Numbers customers can call. The first one is the main number and is used
-       by every "Call Now" button. List one, two or three. */
     phones: ["7895590063", "7900778393", "8859008393"],
-
-    /* The kitchen address, one line per box. */
     addressLine1: "37/1 Om Vihar",
     addressLine2: "Kamla Nagar",
     city: "Agra",

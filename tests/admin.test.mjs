@@ -4,9 +4,10 @@
  * Two jobs:
  *   1. Keep the admin honest about security. It is a static page, so it can
  *      never hold a real secret; the password check must live in server config.
- *   2. Prove the file generator emits valid JavaScript with the right shape. If
- *      it ever emits something broken, the live menu silently falls back to the
- *      static copy in index.html and nobody notices for a week.
+ *   2. Pin validate(), which is the last thing between a typo and the live
+ *      website. Nothing downstream cleans the state up — /api/save stores what
+ *      the editor sends and the renderer prints it — so a rule this validator
+ *      does not enforce is one the visitor reads.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,7 +22,7 @@ const netlifyToml = read('netlify.toml');
 const schemaSql = read('supabase/schema.sql');
 
 await import('../admin/generate.js');
-const { validate, generate, PRICE_FIELDS } = globalThis.SwaadSeAdmin;
+const { validate, PRICE_FIELDS } = globalThis.SwaadSeAdmin;
 
 /** Realistic prices, one per field the editor offers. */
 const samplePrices = () => Object.fromEntries(PRICE_FIELDS.map(({ key }, i) => [key, 50 + i * 10]));
@@ -53,52 +54,16 @@ const fixture = () => ({
   },
 });
 
-/** Execute generated content.js exactly as a browser would, and hand back SITE. */
-const evaluate = code => {
-  const fakeWindow = {};
-  new Function('window', code)(fakeWindow);
-  return fakeWindow.SITE;
-};
-
-// ─── the generator ───────────────────────────────────────────────────────────
-test('generated content.js is valid JavaScript and round-trips exactly', () => {
-  const state = fixture();
-  const site = evaluate(generate(state));
-
-  assert.equal(site.todaysSpecial, state.todaysSpecial);
-  assert.equal(site.weeklyMenu.length, 7);
-  assert.equal(site.weeklyMenu[0].day, 'Monday', 'the week must still start on Monday');
-  assert.equal(site.weeklyMenu[6].day, 'Sunday');
-  assert.equal(site.weeklyMenu[6].closed, true);
-  assert.deepEqual(site.weeklyMenu[0].items, state.weeklyMenu[0].items);
-  assert.deepEqual(site.deliveryWindows, state.deliveryWindows);
-});
-
-test('generated output satisfies the same checks as the shipped content.js', () => {
-  // These mirror tests/sections.test.mjs. The editor must never produce a file
-  // that would fail the suite the owner is told to run before uploading.
-  const site = evaluate(generate(fixture()));
-  for (const day of site.weeklyMenu.slice(0, 6))
-    assert.ok(day.items.length >= 3, `${day.day} needs at least 3 dishes`);
-  assert.ok(site.deliveryWindows.length >= 1, 'at least one delivery window');
-  for (const win of site.deliveryWindows) {
-    assert.ok(win.label.trim().length > 0, 'every window needs customer-readable text');
-    assert.ok(Number.isInteger(win.startHour) && win.startHour >= 0 && win.startHour <= 23);
-    assert.ok(Number.isInteger(win.endHour) && win.endHour > win.startHour);
-  }
-});
-
+// ─── the menu the owner can publish ──────────────────────────────────────────
 test('the owner can run any number of delivery windows, not just two', () => {
   // The admin has add/remove buttons for windows, so one window (a festival
-  // week) and three (an extra evening run) must both survive the round trip.
+  // week) and three (an extra evening run) must both be publishable.
   const one = fixture();
   one.deliveryWindows = [{ label: 'Morning only, 7–9 AM', startHour: 7, endHour: 9 }];
-  assert.equal(evaluate(generate(one)).deliveryWindows.length, 1);
   assert.deepEqual(validate(one).filter(([kind]) => kind === 'error'), []);
 
   const three = fixture();
   three.deliveryWindows.push({ label: '8:00 – 9:00 PM', startHour: 20, endHour: 21 });
-  assert.equal(evaluate(generate(three)).deliveryWindows.length, 3);
   assert.deepEqual(validate(three).filter(([kind]) => kind === 'error'), []);
 
   // Zero windows stays an error — the "Next delivery" tag would have nothing
@@ -108,71 +73,24 @@ test('the owner can run any number of delivery windows, not just two', () => {
   assert.ok(validate(none).some(([kind]) => kind === 'error'));
 });
 
-test('dish names containing quotes or backslashes do not break the file', () => {
+test('an empty dish box is blocked, not published as a blank bullet', () => {
+  // Nothing between the editor and the page strips blanks: the state is stored
+  // as typed and rendered item by item. This error is what stops an empty <li>
+  // appearing under Tuesday.
   const state = fixture();
-  state.weeklyMenu[0].items = ['Dal "Special"', "Mother's Recipe", 'A\\B', 'Rice'];
-  state.todaysSpecial = 'Today\'s "best" — 100% veg';
-  const site = evaluate(generate(state));
-  assert.deepEqual(site.weeklyMenu[0].items, ['Dal "Special"', "Mother's Recipe", 'A\\B', 'Rice']);
-  assert.equal(site.todaysSpecial, 'Today\'s "best" — 100% veg');
+  state.weeklyMenu[1].items = ['Rajma', '', '   ', 'Rice'];
+  const errors = validate(state).filter(([kind]) => kind === 'error').map(([, m]) => m);
+  assert.match(errors.join(' | '), /Tuesday has an empty dish box/);
 });
 
-test('empty dish boxes are dropped rather than written as blanks', () => {
+test('a closed day still has to say something to customers', () => {
   const state = fixture();
-  state.weeklyMenu[1].items = ['Rajma', '', '   ', 'Rice', '4 Tawa Roti'];
-  const site = evaluate(generate(state));
-  assert.deepEqual(site.weeklyMenu[1].items, ['Rajma', 'Rice', '4 Tawa Roti']);
-});
-
-test('a closed day emits its note and an empty item list', () => {
-  const state = fixture();
-  state.weeklyMenu[6].note = 'Closed today, back tomorrow.';
-  const site = evaluate(generate(state));
-  assert.equal(site.weeklyMenu[6].closed, true);
-  assert.equal(site.weeklyMenu[6].note, 'Closed today, back tomorrow.');
-  assert.deepEqual(site.weeklyMenu[6].items, []);
-});
-
-test('generated file keeps the plain-English editing instructions', () => {
-  // The owner may edit by hand later; stripping the guide would strand them.
-  const code = generate(fixture());
-  assert.match(code, /THIS IS THE FILE YOU EDIT EVERY WEEK/);
-  assert.match(code, /HOW TO EDIT/);
-  assert.match(code, /Never delete a quote mark/);
-  assert.match(code, /window\.SITE = \{/);
+  state.weeklyMenu[6].note = '';
+  assert.match(validate(state).map(([, m]) => m).join(' | '),
+    /Sunday is marked closed but has no message/);
 });
 
 // ─── prices ──────────────────────────────────────────────────────────────────
-test('every price survives the trip through the generated file as a number', () => {
-  const state = fixture();
-  const site = evaluate(generate(state));
-
-  assert.deepEqual(site.prices, state.prices);
-  for (const { key, label } of PRICE_FIELDS)
-    assert.equal(typeof site.prices[key], 'number',
-      `${label} came out as ${typeof site.prices[key]}; the website ignores anything but a number`);
-});
-
-test('a price typed as text or left blank never reaches the file as a broken value', () => {
-  // parseInt('') is NaN and the boxes are free text on some phone keyboards.
-  const state = fixture();
-  state.prices['pack-dal'] = NaN;
-  state.prices['pack-rice'] = '₹140';
-  const site = evaluate(generate(state));
-
-  assert.equal(site.prices['pack-dal'], 0, 'NaN must become a plain 0, not the literal NaN');
-  assert.equal(site.prices['pack-rice'], 0, 'a string must not be written as a string');
-  // …and the owner is stopped before they can paste it anywhere.
-  assert.match(validate(state).map(([, m]) => m).join(' | '), /Dal \(400 ml\)/);
-});
-
-test('the generated file is still valid JavaScript when every price is missing', () => {
-  const state = fixture();
-  delete state.prices;
-  const site = evaluate(generate(state));           // must not throw
-  assert.equal(Object.keys(site.prices).length, PRICE_FIELDS.length);
-});
-
 test('validator catches every way the owner can break a price', () => {
   const messages = state => validate(state).map(([, m]) => m).join(' | ');
   const kinds = state => validate(state).map(([kind]) => kind);
@@ -192,6 +110,15 @@ test('validator catches every way the owner can break a price', () => {
   s = fixture(); delete s.prices;
   assert.match(messages(s), /No prices found/);
 
+  // parseInt('') is NaN, and the boxes are free text on some phone keyboards.
+  // Neither may pass: the renderer ignores anything that is not a whole number
+  // above zero, so the card would quietly keep showing the old amount.
+  s = fixture(); s.prices['pack-dal'] = NaN;
+  assert.match(messages(s), /Dal \(400 ml\)/);
+
+  s = fixture(); s.prices['pack-rice'] = '₹140';
+  assert.match(messages(s), /Rice \(400 ml\)/);
+
   // Two prices for the same thing, side by side on one page.
   s = fixture(); s.prices['tier-single'] = 95;
   assert.ok(kinds(s).includes('warn'));
@@ -204,33 +131,6 @@ test('validator catches every way the owner can break a price', () => {
 });
 
 // ─── phone numbers and address ───────────────────────────────────────────────
-test('contact details round-trip as digits, whatever the owner typed', () => {
-  const state = fixture();
-  // People type numbers the way they read them. The file must hold digits only,
-  // because the website builds "tel:+91…" and "wa.me/…" out of them.
-  state.contact.phones = ['78955 90063', '+91 79007 78393', '8859-008-393'];
-  state.contact.whatsapp = '+91 78955 90063';
-  const site = evaluate(generate(state));
-
-  assert.deepEqual(site.contact.phones, ['7895590063', '917900778393', '8859008393']);
-  assert.equal(site.contact.whatsapp, '917895590063');
-  assert.equal(site.contact.city, 'Agra');
-});
-
-test('an address typed with stray spaces is trimmed', () => {
-  const state = fixture();
-  state.contact.addressLine1 = '  37/1 Om Vihar  ';
-  assert.equal(evaluate(generate(state)).contact.addressLine1, '37/1 Om Vihar');
-});
-
-test('the generated file stays valid when contact details are missing entirely', () => {
-  const state = fixture();
-  delete state.contact;
-  const site = evaluate(generate(state));            // must not throw
-  assert.equal(site.contact.whatsapp, '');
-  assert.deepEqual(site.contact.phones, []);
-});
-
 test('validator catches every way the owner can break a phone number', () => {
   const messages = state => validate(state).map(([, m]) => m).join(' | ');
   const kinds = state => validate(state).map(([kind]) => kind);
@@ -356,15 +256,46 @@ test('no service-role key exists anywhere in the system', () => {
     assert.ok(!/service[_-]?role/i.test(source), 'a service-role key is referenced; use the user token + RLS');
 });
 
-test('the edit history table is locked down in the committed schema', () => {
+test('the content table is locked down in the committed schema', () => {
   // Tests cannot reach a live database, so the committed schema is the spec:
-  // RLS on, nothing for anonymous visitors, and no way to rewrite history.
+  // RLS on, no way to rewrite history, and the anonymous read kept to exactly
+  // the one column the website needs.
   assert.match(schemaSql, /enable row level security/i);
-  assert.ok(!/to\s+anon\b/i.test(schemaSql), 'no policy may grant anything to anon');
   assert.ok(!/for\s+(update|delete)/i.test(schemaSql),
     'history must be append-only — no update or delete policies');
   assert.match(schemaSql, /with check\s*\(\s*saved_by\s*=\s*auth\.uid\(\)\s*\)/i,
     'inserts must be recorded as the user who made them');
+
+  // The edge renderer reads the live menu with the anon key, so anon needs a
+  // select — but a column grant, never a table one. A blanket grant would hand
+  // every visitor the author and timestamp of every edit ever made.
+  // Assert the column LIST, not an exact string: `id` has to be in there for
+  // PostgREST to order by it, and pinning the literal text would fail the next
+  // time a column is legitimately added.
+  const grant = /grant\s+select\s*\(([^)]*)\)\s+on\s+public\.site_state\s+to\s+anon/i.exec(schemaSql);
+  assert.ok(grant, 'anon needs a column-scoped select grant');
+  const columns = grant[1].split(',').map(c => c.trim());
+  assert.ok(columns.includes('state'), 'the website cannot render without state');
+  for (const secret of ['saved_by', 'saved_at'])
+    assert.ok(!columns.includes(secret), `anon must not read ${secret}`);
+  assert.ok(!/grant\s+select\s+on\s+public\.site_state\s+to\s+anon/i.test(schemaSql),
+    'a table-wide grant to anon exposes every column');
+
+  // Supabase grants anon SELECT on every column by default, so the column
+  // grant above narrows nothing unless the blanket grant is revoked first —
+  // and it has to happen BEFORE, or it takes the narrow grant away again.
+  const revokeAt = schemaSql.search(/revoke\s+select\s+on\s+public\.site_state\s+from\s+anon/i);
+  const grantAt = schemaSql.search(/grant\s+select\s*\(/i);
+  assert.ok(revokeAt !== -1, 'the default table-wide grant to anon must be revoked');
+  assert.ok(revokeAt < grantAt, 'the revoke must come before the column grant, or it undoes it');
+
+  // Split rather than match: one regex spanning "create policy … to anon"
+  // happily runs from the first policy into a later one and miscounts.
+  const anonPolicies = schemaSql.split(/create policy/i).slice(1)
+    .map(block => block.split(';')[0])
+    .filter(statement => /\bto\s+anon\b/i.test(statement));
+  assert.equal(anonPolicies.length, 1, 'anon should have exactly one policy');
+  assert.match(anonPolicies[0], /for\s+select/i, 'the anon policy must be read-only');
 });
 
 test('the admin area is kept out of search engines', () => {
@@ -378,10 +309,14 @@ test('the save function keeps its settings out of the repository', () => {
   assert.match(gitignore, /^\.env\.\*$/m, '.env.local and friends must be gitignored too');
 
   const saveSrc = read('netlify/functions/save.mjs');
-  for (const name of ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'ADMIN_EMAIL', 'GITHUB_TOKEN'])
+  for (const name of ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'ADMIN_EMAIL'])
     assert.match(saveSrc, new RegExp(name), `${name} must come from the environment`);
-  for (const literal of [/SUPABASE_ANON_KEY\s*=\s*['"]/, /GITHUB_TOKEN\s*=\s*['"]/, /ADMIN_EMAIL\s*=\s*['"]/])
+  for (const literal of [/SUPABASE_ANON_KEY\s*=\s*['"]/, /ADMIN_EMAIL\s*=\s*['"]/])
     assert.ok(!literal.test(saveSrc), `a hard-coded secret matching ${literal} is in the save function`);
+
+  // Publishing is a database insert. A GitHub credential here would be a write
+  // token to the whole repository sitting in an env var for no reason at all.
+  assert.ok(!/GITHUB_/.test(saveSrc), 'the save function must not publish through GitHub');
 });
 
 test('the public site does not advertise the admin page', () => {
@@ -391,18 +326,17 @@ test('the public site does not advertise the admin page', () => {
 
 // ─── no duplicated logic ─────────────────────────────────────────────────────
 test('the editor reuses the site logic rather than copying it', () => {
-  // A second copy of nextDelivery() or the generator would drift from the
-  // tested one, and the preview would start lying to the owner.
+  // A second copy of nextDelivery() or the validator would drift from the
+  // tested one: the preview would lie to the owner, and /api/save would refuse
+  // a menu the page had just called clean.
   assert.match(adminHtml, /<script src="\.\.\/js\/main\.js"><\/script>/);
   assert.match(adminHtml, /<script src="generate\.js"><\/script>/);
   assert.match(adminHtml, /window\.SwaadSeAdmin/);
   assert.ok(!/function nextDelivery/.test(adminHtml), 'nextDelivery re-implemented in the admin page');
-  assert.ok(!/function generate\s*\(/.test(adminHtml), 'generator re-implemented in the admin page');
   assert.ok(!/function validate\s*\(/.test(adminHtml), 'validator re-implemented in the admin page');
 });
 
 test('the editor blocks saving while there are errors', () => {
-  assert.match(adminHtml, /\$\('copy'\)\.disabled = blocked/);
   assert.match(adminHtml, /\$\('save'\)\.disabled = blocked/);
   assert.match(adminHtml, /issue--error/);
 });
@@ -411,20 +345,24 @@ test('the editor blocks saving while there are errors', () => {
 test('the editor calls the save function at an absolute path', () => {
   // This page is served from /admin/, so fetch('api/save') would resolve to
   // /admin/api/save — which Netlify does not route to the function. The page
-  // would then silently decide saving is unavailable and show copy-and-paste,
-  // exactly the thing the function exists to remove.
+  // would then silently decide saving is unavailable — leaving the owner with
+  // no way to publish at all.
   const calls = [...adminHtml.matchAll(/fetch\(\s*(['"])([^'"]*save[^'"]*)\1/g)].map(m => m[2]);
   assert.ok(calls.length >= 2, `expected the readiness check and the save call, found ${calls.length}`);
   for (const path of calls)
     assert.ok(path.startsWith('/'), `fetch("${path}") is relative; it must be "/api/save"`);
 });
 
-test('the editor keeps a real login and copy-and-paste as alternatives', () => {
-  for (const id of ['save-online', 'save-offline', 'save', 'copy', 'pw', 'email', 'login', 'logged-in', 'recovery'])
+test('the editor shows a login, and only once the server says saving works', () => {
+  for (const id of ['save-online', 'save', 'pw', 'email', 'login', 'logged-in', 'recovery'])
     assert.match(adminHtml, new RegExp(`id="${id}"`), `missing #${id}`);
-  // Which one is shown is decided by asking the server, never assumed.
+  // Whether saving is possible is decided by asking the server, never assumed.
   assert.match(adminHtml, /function pickSavingMode/);
-  assert.match(adminHtml, /useOfflineSaving/);
+  assert.match(adminHtml, /function cannotSave/);
+  // Publishing is the database insert. A page offering to hand the owner a
+  // file to paste somewhere would be offering a route that publishes nothing.
+  assert.ok(!/id="(copy|download|output)"/.test(adminHtml),
+    'the editor offers a file-and-paste route, which publishes nothing');
 });
 
 test('delivery windows can be added and removed, like dishes', () => {

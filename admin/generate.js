@@ -1,18 +1,14 @@
 /* ============================================================================
- *  Admin editor — validation and file generation.
+ *  Admin editor — what a valid menu is, and which fields there are.
  *
- *  Pure functions, no DOM. Kept out of admin/index.html so Node can import them
- *  and prove the generated file is valid JavaScript with the right shape. This
- *  is the riskiest code in the project: if it emits a broken content.js, the
- *  live menu silently falls back to the static copy in index.html and nobody
- *  notices for a week. Tested in tests/admin.test.mjs.
+ *  Pure values and pure functions, no DOM, so three consumers share one copy of
+ *  the rules: the admin page's inputs, netlify/functions/save.mjs, and
+ *  tests/admin.test.mjs. validate() is the last thing standing between a typo
+ *  and the live website — a price it lets through as text rather than a number
+ *  is a card that quietly keeps showing last month's amount.
  * ========================================================================== */
 (() => {
   'use strict';
-
-  /** JSON.stringify handles quoting and escaping correctly, including quotes
-   *  and backslashes a customer's dish name might contain. */
-  const q = value => JSON.stringify(String(value));
 
   /** Phone numbers are stored as digits only; the website adds +91 and spacing. */
   const digits = value => String(value ?? '').replace(/\D/g, '');
@@ -174,143 +170,5 @@
     return issues;
   }
 
-  /**
-   * Writes a complete, hand-editable js/content.js. The plain-English comment
-   * block is reproduced deliberately — the owner may well edit this file by hand
-   * later, and stripping the instructions would strand them.
-   * @param {object} state
-   * @returns {string}
-   */
-  function generate(state) {
-    const days = state.weeklyMenu.map(entry => {
-      const lines = [
-        '    {',
-        `      day: ${q(entry.day)},`,
-        `      short: ${q(entry.short)},`,
-      ];
-      if (entry.closed) {
-        lines.push('      closed: true,');
-        lines.push(`      note: ${q(entry.note || '')},`);
-        lines.push('      items: []');
-      } else {
-        const items = entry.items.filter(d => String(d).trim()).map(q).join(', ');
-        lines.push(`      items: [${items}]`);
-      }
-      lines.push('    }');
-      return lines.join('\n');
-    }).join(',\n');
-
-    const windows = state.deliveryWindows.map(w =>
-      `    { label: ${q(w.label)}, startHour: ${w.startHour}, endHour: ${w.endHour} }`
-    ).join(',\n');
-
-    /* Prices, grouped exactly as the owner sees them on the page, with a blank
-       line and a heading before each group so the file stays readable by hand. */
-    const given = state.prices || {};
-    const priceLines = [];
-    let group = null;
-    PRICE_FIELDS.forEach(field => {
-      if (field.group !== group) {
-        group = field.group;
-        if (priceLines.length) priceLines.push('');
-        priceLines.push(`    /* ${group} */`);
-      }
-      priceLines.push(`    ${q(field.key)}: ${Number(given[field.key]) || 0},`);
-    });
-    // The last entry must not carry a trailing comma before the closing brace.
-    const last = priceLines.length - 1;
-    priceLines[last] = priceLines[last].replace(/,$/, '');
-    const prices = priceLines.join('\n');
-
-    /* Contact details. Numbers are written as digits only — the website adds
-       the +91 and the spacing — so anything the owner typed is stripped here
-       rather than carried into the file. */
-    const given_contact = state.contact || {};
-    const phoneList = (Array.isArray(given_contact.phones) ? given_contact.phones : [])
-      .map(number => q(digits(number)))
-      .join(', ');
-    const addressLines = ADDRESS_FIELDS
-      .map(({ key }, i) => `    ${key}: ${q(String(given_contact[key] ?? '').trim())}` +
-        (i === ADDRESS_FIELDS.length - 1 ? '' : ','))
-      .join('\n');
-
-    return `/* ============================================================================
- *  ✏️  THIS IS THE FILE YOU EDIT EVERY WEEK
- * ============================================================================
- *
- *  Easiest way to change anything here: open /admin/ on your website, edit the
- *  form, and press Copy. It writes this file for you.
- *
- *  To edit by hand instead — three rules, that is all:
- *
- *    1. Only change the words BETWEEN the quote marks "like this".
- *    2. Never delete a quote mark " a comma , a bracket [ ] or a brace { }.
- *    3. Save the file, upload it, then refresh the website.
- *
- *  HOW TO EDIT — example, changing Monday's food:
- *
- *      BEFORE:   items: ["Dal Tadka", "Mix Veg", "Rice", "4 Tawa Roti"]
- *      AFTER:    items: ["Kadhi", "Bhindi Masala", "Rice", "4 Tawa Roti"]
- *
- *  If the site shows the wrong thing after an edit, it is almost always a
- *  missing quote mark or comma. Compare your line with the ones around it.
- * ========================================================================== */
-
-window.SITE = {
-
-  /* ── Today's special ───────────────────────────────────────────────────────
-     Shown in the box near the top of the page. Change it every morning.       */
-  todaysSpecial: ${q(state.todaysSpecial)},
-
-  /* ── The weekly menu ───────────────────────────────────────────────────────
-     One block per day, Monday first. The website automatically opens on
-     today's day, so a customer arriving on Wednesday sees Wednesday.
-
-     Sunday has "closed: true" because the kitchen is shut. Leave that as it is
-     unless you start delivering on Sundays.                                 */
-  weeklyMenu: [
-${days}
-  ],
-
-  /* ── Delivery windows ──────────────────────────────────────────────────────
-     Used for the "Next delivery" tag at the top of the page, which updates
-     itself based on the current time. Times are on the 24-hour clock:
-     16 means 4 PM. Only change these if your delivery timings change.       */
-  deliveryWindows: [
-${windows}
-  ],
-
-  /* ── Prices ────────────────────────────────────────────────────────────────
-     Every price on the website, in rupees. Write the NUMBER ONLY — no ₹ sign,
-     no comma, no quote marks:
-
-         "plan-basic": 80          ✅ correct
-         "plan-basic": "₹80"       ❌ wrong — the website will show nothing
-         "plan-basic": 1,200       ❌ wrong — write 1200
-
-     Changing a number here changes it everywhere at once: the price on the
-     card AND the price inside the WhatsApp message the customer sends you.
-
-     Do not rename the words on the left. The website finds each price by
-     that exact name.                                                        */
-  prices: {
-${prices}
-  },
-
-  /* ── Phone numbers and address ─────────────────────────────────────────────
-     Changing a number here changes it everywhere on the website: every Call
-     button, every WhatsApp button, the contact section and the footer.
-
-     Phone numbers are 10 digits with NO spaces, no +91, no dashes. The
-     WhatsApp number keeps the 91 in front, because WhatsApp needs it.       */
-  contact: {
-    whatsapp: ${q(digits(given_contact.whatsapp))},
-    phones: [${phoneList}],
-${addressLines}
-  }
-};
-`;
-  }
-
-  globalThis.SwaadSeAdmin = { validate, generate, PRICE_FIELDS, ADDRESS_FIELDS, PHONE_COUNT };
+  globalThis.SwaadSeAdmin = { validate, PRICE_FIELDS, ADDRESS_FIELDS, PHONE_COUNT };
 })();

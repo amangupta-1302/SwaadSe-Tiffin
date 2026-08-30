@@ -3,118 +3,123 @@
 A static, single-page landing site whose only job is to turn paid Google Search
 clicks into WhatsApp inquiries and monthly tiffin subscriptions.
 
-**No build step, no dependencies.** The only server code is two small Netlify
-functions: `/api/save`, which lets the owner publish edits, and a daily ping
-that keeps the free database awake.
+**No build step, no dependencies.** Server code is three small files: one
+Netlify function that publishes the owner's edits, a daily ping that keeps the
+free database awake, and an edge function that fills each page from the
+database on the way out.
 
 ```
-index.html          the landing page — all sections, schema, copy
-privacy.html        ┐ real pages, so the footer links work and Google Ads
-terms.html          ┘ has a policy to point at
-css/styles.css      design tokens + every style
-js/content.js       ✏️ OWNER FILE — menu, delivery windows, every price
-js/main.js          progressive enhancement only; page works without it
-admin/              /admin/ menu + price editor behind a Supabase login
-supabase/           schema.sql — the login + edit-history database, run once
-fonts/              3 self-hosted woff2 subsets (48 KB total)
-images/             placeholders — replace with real photos, see IMAGES.md
-tests/              assertions guarding prices, a11y, CWV, schema, the admin
-tools/              regenerate placeholder images and the OG card
-netlify/            the save function and the daily keep-alive ping
-netlify.toml        Netlify config; no build step, just the functions
-_headers            makes a menu or price change appear immediately
-CLAUDE.md           architecture notes for Claude Code / AI assistants
+index.html               the landing page — all sections, schema, copy
+privacy.html · terms.html  real pages, so the footer links and Ads policy work
+css/styles.css           design tokens + every style
+js/content.js            outage fallback — menu, delivery windows, every price
+js/main.js               progressive enhancement only; page works without it
+admin/                   /admin/ menu + price editor behind a Supabase login
+netlify/functions/       save.mjs (publishes) · ping.mjs (daily keep-alive)
+netlify/edge-functions/  render.js — fills the page from the database
+supabase/schema.sql      the login + edit-history database, run once
+fonts/                   3 self-hosted woff2 subsets (48 KB total)
+images/                  placeholders — replace with real photos, see IMAGES.md
+tests/                   126 assertions: prices, a11y, CWV, schema, admin
+tools/                   regenerate placeholder images and the OG card
+netlify.toml · _headers · _redirects · robots.txt · sitemap.xml
+CLAUDE.md                architecture notes for Claude Code / AI assistants
 ```
 
-Docs: **`DEPLOY.md`** (Netlify + Supabase setup, env vars, client handover),
-**`EDITING-GUIDE.md`** (changing content), **`IMAGES.md`** (photos).
+Docs: **`DEPLOY.md`** (setup + client handover) · **`EDITING-GUIDE.md`** (what
+`/admin/` cannot change) · **`IMAGES.md`** (photos).
 
 ## Run it locally
 
-```bash
-npm run serve            # page only, http://localhost:8080 — no saving
-npx -y netlify-cli dev   # the whole app incl. /api/save, http://localhost:8888
-```
+| Command | Serves | `/api/save` | Edge renderer |
+|---|---|---|---|
+| `npm run serve` | `:8080` | ✗ | ✗ |
+| `npx -y netlify-cli dev` | `:8888` | ✓ | ✓ |
+
+`npm test` — ~85 ms, must end `fail 0`.
 
 Use a server, not a double-clicked file, or fonts and JSON-LD behave
-differently from production. Under `netlify dev` with no `.env`, `/admin/`
-correctly falls back to copy-and-paste mode and names the unset settings; to
-test login and saving, put the six variables from DEPLOY.md in a local `.env`
-(gitignored — never commit it).
-
-```bash
-npm test                 # ~1s, must end "fail 0" before anything ships
-```
+differently from production. With no `.env`, `/admin/` correctly reports saving
+is not switched on and names the unset settings; to test login and saving, put
+the three variables from DEPLOY.md in a local `.env` (gitignored).
 
 ## Admin area — `/admin/`
 
-The owner logs in (Supabase: one account, email + password, self-service
-reset) and edits today's special, the weekly rotation, all 15 prices, the
-contact details, and the delivery windows — dishes and windows have true
-add/remove. Red messages block saving; amber ones are advice.
+```
+  Owner ──edit──▶ /admin/ ──POST + token──▶ /api/save
+                                                 │
+                                    verify token │ email == ADMIN_EMAIL
+                                                 ▼
+                                             Supabase
+                                          site_state row
+                                     (the INSERT is the publish)
+                                                 │
+  Visitor ──GET /──▶ render.js ──newest row──────┘
+                         │        (30s in-process memo)
+                         ▼
+                   filled HTML     DB down? ──▶ baked index.html
+```
 
-On **Save**, a Netlify function verifies the login token server-side, re-runs
-the same validation the page shows, and commits `js/content.js` to GitHub;
-Netlify redeploys and the change is live in about a minute. Every edit is a
-revertible commit, and each save is also logged to a Supabase table with who
-saved it. The live site never reads from the database — an outage there can
-only inconvenience the login.
+The owner logs in (one Supabase account, self-service reset) and edits today's
+special, the weekly rotation, all 15 prices, contact details and delivery
+windows. Red messages block saving; amber are advice.
 
-No secret ever ships in the page (tests enforce it): the session token lives
-in one JavaScript variable, never browser storage, and even the Supabase
-address is fetched from `/api/save` at load time. `/admin/` being publicly
-reachable is intended — it holds nothing and can change nothing without a
-verified login. Where `/api/save` does not exist (a plain static host, the
-folder opened locally) the page falls back to copy-and-paste instead of a Save
-button that could only fail.
+- **The insert is the publish** — no deploy, live in ~30s, and the append-only
+  table means any past version can be republished.
+- **The same edge function fills `/admin/`**, so the editor opens on what is
+  live, not on a file nothing writes.
+- **Supabase down → the site still renders** from the baked values. Stale,
+  never blank, which matters on paid clicks.
+- **No secret ships in the page** (tests enforce): the session token lives in
+  one JS variable, never browser storage, and even the Supabase address comes
+  from `/api/save`. `/admin/` being public is intended — it holds nothing and
+  changes nothing without a verified login.
 
-Prices are the reason the admin exists: each price appears on the page twice —
-as text and inside the prefilled WhatsApp message — and editing by hand meant
-customers quoting prices you no longer charge. Three price mentions stay
-manual on purpose (meta description, sharing preview, schema `priceRange`):
-search engines read them before JavaScript runs. EDITING-GUIDE §2 lists them.
+Prices are why the admin exists: each appears twice, as text and inside the
+prefilled WhatsApp message, and hand-editing meant customers quoting prices you
+no longer charge. Three mentions stay manual because search engines read them
+before JavaScript runs (EDITING-GUIDE §2).
 
 ## Before you go live
 
-- [ ] **Replace all three sample reviews** (`data-placeholder="true"` in
-      `index.html`). Invented testimonials are a common Google Ads suspension
-      cause. EDITING-GUIDE §3.
-- [ ] **Replace the placeholder photos**, hero and kitchen first. IMAGES.md.
-- [ ] **Set your real domain** — `swaadsetiffin.in` appears 15× across
-      `index.html`, `privacy.html`, `terms.html`, `sitemap.xml`, `robots.txt`.
-- [ ] **Add your FSSAI registration number** in the footer.
-- [ ] **Set exact kitchen coordinates** in the JSON-LD `geo` block.
-- [ ] **Add Instagram/Facebook links**, or delete those two icons.
-- [ ] **Paste your Google Business Profile link** into "See us on Google".
-- [ ] Confirm every price and plan inclusion via `/admin/`.
-- [ ] **Set the six Netlify environment variables and confirm saving works**
-      (DEPLOY.md step 6 is the checklist).
-- [ ] Run `npm test` one final time.
+| ☐ | Do this | Where |
+|---|---|---|
+| | Replace all three sample reviews — invented testimonials are a common Ads suspension cause | `index.html`, `data-placeholder="true"` |
+| | Replace the placeholder photos, hero and kitchen first | `images/` · IMAGES.md |
+| | Set your real domain — `swaadsetiffin.in` appears 15× | `index.html` (8), `sitemap.xml` (4), `privacy.html`, `terms.html`, `robots.txt` |
+| | Add your FSSAI registration number | `index.html`, `FSSAI Reg. No.` |
+| | Set exact kitchen coordinates | `index.html`, JSON-LD `geo` |
+| | Add Instagram/Facebook links, or delete the icons | `index.html`, `✏️ EDIT: replace the #` |
+| | Paste your Google Business Profile link | `index.html`, "See us on Google" |
+| | Confirm every price and plan inclusion | `/admin/` |
+| | Set the three Netlify env vars, confirm saving works | DEPLOY.md step 5 |
+| | Run `npm test` one final time | must end `fail 0` |
 
 ## Deploying
 
-**Netlify — follow `DEPLOY.md`.** Roughly: push to GitHub, import the repo on
-Netlify, set up Supabase, set six environment variables. Any other static host
-serves the site fine, but `/admin/` falls back to copy-and-paste there.
+**Follow `DEPLOY.md`:** push to GitHub, import on Netlify, set up Supabase, set
+three environment variables. Netlify is not optional any more — the edge
+function is what fills the page from the database, so another static host would
+serve only the baked values.
 
-After deploying: check the live URL in the
+After deploying, check the live URL in the
 [rich-results test](https://search.google.com/test/rich-results) and
-[PageSpeed](https://pagespeed.web.dev) (mobile), share the URL to yourself on
+[PageSpeed](https://pagespeed.web.dev) (mobile), share it to yourself on
 WhatsApp to see the preview card, and submit `sitemap.xml` in Search Console.
 
 ## Google Ads setup
 
-**Match headlines to the `<h1>`** (*Fresh Homemade Veg Tiffin Delivered Daily
-in Agra*) — "tiffin service Agra", "veg tiffin delivery Agra". Ads whose
-wording appears on the landing page cost less per click.
+**Match headlines to the `<h1>`** (*Fresh Homemade Veg Tiffin Delivered Daily in
+Agra*) — "tiffin service Agra", "veg tiffin delivery Agra". Ads whose wording
+appears on the landing page cost less per click.
 
 **Sitelinks:** Meal Plans `/#plans` · Today's Menu `/#todays-menu` · Monthly
 Subscription `/#subscription` · Delivery Area `/#delivery` · Contact
 `/#contact`. **Call extension:** `+91 78955 90063`, Mon–Sat 07:00–17:00.
 
-**Conversion tracking needs a click event** — the customer leaves for
-WhatsApp, so there is no thank-you page to track. After installing a GA4/Ads
-tag, add before `</body>`:
+**Conversion tracking needs a click event** — the customer leaves for WhatsApp,
+so there is no thank-you page. After installing a GA4/Ads tag, add before
+`</body>`:
 
 ```html
 <script>
@@ -127,28 +132,34 @@ document.addEventListener('click', e => {
 </script>
 ```
 
-Uncomment `gtag` once the tag is installed, then mark `whatsapp_click` and
-`call_click` as conversions. **If you add any tag, update `privacy.html`** —
-it currently states truthfully that the site sets no tracking cookies.
+Uncomment `gtag` once the tag is installed, then mark both events as
+conversions. **If you add any tag, update `privacy.html`** — it currently states
+truthfully that the site sets no tracking cookies.
 
 ## What the tests enforce
 
-Each is an assertion in `tests/`, not an intention: WhatsApp CTA above the
-fold on 375×667; the `<h1>` is the LCP element; CLS 0 (every image has
-dimensions); nothing loads from a third-party origin (self-hosted fonts,
-click-to-load map); all 15 prices flow from `js/content.js` with no stale or
-unused ones; every referenced file exists; WCAG AA contrast computed, not
-assumed; the whole page works with JavaScript disabled. 74 KB gzipped
-including fonts.
+126 assertions, ~85 ms. Each is an assertion, not an intention:
+
+| File | # | Guards |
+|---|---|---|
+| `sections` | 42 | CTA above the fold · `<h1>` is LCP · 15 prices, none stale or unused · a price and the message quoting it never disagree · works with JS off · legal pages match |
+| `admin` | 22 | server-side login · no credential in the page · no `service_role` key · editor reuses `generate.js` · token never persisted |
+| `render` | 18 | DB fills the served HTML · injected state cannot escape its script tag · no state at all is survivable · nested markup untouched |
+| `schedule` | 18 | next-delivery across every day and hour · address slots, cleared line 2 included |
+| `audit` | 14 | WCAG AA contrast computed, not assumed · no third-party origin · every referenced file exists · every image dimensioned (CLS 0) |
+| `save` | 12 | every auth guard · a refused insert fails the save · missing settings refuse rather than allow |
+
+74 KB gzipped including fonts.
 
 ## Not included
 
-Photo uploads from `/admin/` (needs file storage + resizing), review editing,
-and automatic updates to the three SEO price mentions, the business-listing
-data, the map link, and the legal pages (tests catch the legal pages
-drifting). GA4/Ads tag IDs, real photography, FSSAI number, and exact
-coordinates are in the checklist above.
+Photo uploads from `/admin/` and review editing. Automatic updates to the three
+SEO price mentions, business-listing data, the map link, and the legal pages —
+though tests catch the legal pages drifting. Tag IDs, photography, FSSAI number
+and coordinates are in the checklist above.
 
-One deliberate trade: saving commits to GitHub and waits for Netlify to
-redeploy — about a minute rather than instant. In exchange the live site stays
-fully static, and every change the client makes is a git commit you can revert.
+One deliberate trade: the database is read at the **edge**, not in the browser.
+That costs an edge function and a 30-second memo, and buys back everything that
+makes this page work — it renders with JavaScript off, crawlers see real
+content, no second origin sits in front of the first paint, and a paused
+free-tier database cannot take the landing page down.

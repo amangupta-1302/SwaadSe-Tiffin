@@ -6,15 +6,20 @@
  *  This file only makes those things nicer:
  *
  *    1. "Next delivery" tag shows the real next window
- *    2. Today's Special + the weekly menu render from js/content.js
- *    3. every price comes from js/content.js, links included
- *    4. phone numbers and the address come from js/content.js too
+ *    2. Today's Special + the weekly menu render from window.SITE
+ *    3. every price comes from window.SITE, links included
+ *    4. phone numbers and the address come from window.SITE too
  *    5. the week collapses into day tabs and opens on today
  *    6. header gets a shadow once scrolled
  *    7. mobile nav opens / closes
  *    8. sections fade in on scroll (skipped if the visitor prefers less motion)
  *    9. only one FAQ answer stays open at a time
  *   10. Google Maps loads on click, so it costs nothing until it is wanted
+ *
+ *  window.SITE is the published state, written into the page by
+ *  netlify/edge-functions/render.js; js/content.js supplies it when the
+ *  database cannot be reached. Either way this file has already been beaten to
+ *  it server-side, and re-applies the same values as a second safety net.
  *
  *  The date logic at the top is pure and unit-tested in tests/schedule.test.mjs.
  *  Do not put wording that customers read in this file — it belongs in

@@ -125,7 +125,7 @@ window.SITE = {
      WhatsApp number keeps the 91 in front, because WhatsApp needs it.       */
   contact: {
     whatsapp: "917895590063",
-    phones: ["7895590063", "7900778393", "8859008393"],
+    phones: ["8887673224", "7900778393", "8859008393"],
     addressLine1: "37/1 Om Vihar",
     addressLine2: "Kamla Nagar",
     city: "Agra",
